@@ -85,6 +85,7 @@ public class PetService {
         }
         petMapper.apply(request, pet);
         pet.touch();
+        eventPublisher.publish(PetEvent.PetUpdated.of(pet));
         return petMapper.toResponse(pet);
     }
 

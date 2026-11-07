@@ -403,6 +403,23 @@ class PetControllerTest extends IntegrationTest {
         }
 
         @Test
+        void publishesPetUpdatedWithTheNewValues() throws Exception {
+            UUID home = household(owner);
+            UUID second = household(owner);
+            String id = createPet(owner, home, "Luna", "DOG");
+
+            mvc.perform(put("/api/v1/pets/{id}", id).with(owner.jwt())
+                    .contentType(MediaType.APPLICATION_JSON).content(petJson(second, "Luna Maria", "CAT")))
+                .andExpect(status().isOk());
+
+            DocumentContext event = awaitEvent("pet.updated", data("petId", id));
+            assertThat(event.read("$.producer", String.class)).isEqualTo("pawtrack-pet");
+            assertThat(event.read("$.data.householdId", String.class)).isEqualTo(second.toString());
+            assertThat(event.read("$.data.name", String.class)).isEqualTo("Luna Maria");
+            assertThat(event.read("$.data.species", String.class)).isEqualTo("CAT");
+        }
+
+        @Test
         void unknownPetGets404() throws Exception {
             UUID home = household(owner);
             mvc.perform(put("/api/v1/pets/{id}", UUID.randomUUID()).with(owner.jwt())

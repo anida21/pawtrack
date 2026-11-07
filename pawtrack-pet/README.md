@@ -15,7 +15,7 @@ Contract: [`pet.yaml`](../pawtrack-development/contracts/pet.yaml)
 |---|---|---|
 | GET | `/api/v1/pets` | pets of all my households (`householdId`, `species`, `page`, `size`) |
 | POST | `/api/v1/pets` | create, publishes `pet.created` |
-| GET / PUT / DELETE | `/api/v1/pets/{petId}` | read / full update / soft delete (publishes `pet.deleted`) |
+| GET / PUT / DELETE | `/api/v1/pets/{petId}` | read / full update (publishes `pet.updated`) / soft delete (publishes `pet.deleted`) |
 | PUT | `/api/v1/pets/{petId}/photo` | multipart `file`, jpeg/png/webp, max 5 MB |
 | GET | `/api/v1/pets/{petId}/photo` | 302 to a pre-signed URL valid 10 minutes |
 

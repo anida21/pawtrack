@@ -32,6 +32,7 @@
 | `household.invitation.created` | identity | `householdId, householdName, email, code, invitedBy, expiresAt` | notification (sends invite email) |
 | `user.updated` | identity | `userId, email, displayName, timezone, emailNotifications` | notification (keeps recipient copy). Sent on `PATCH /me` and once when the user is first provisioned, so treat it as an upsert |
 | `pet.created` | pet | `petId, householdId, name, species` | notification, health |
+| `pet.updated` | pet | `petId, householdId, name, species` | health, notification: upsert the local `petId → householdId, name` copy. Sent on every `PUT /pets/{petId}`; `householdId` is the new one if the pet was moved |
 | `pet.deleted` | pet | `petId, householdId` | health (soft-delete records), notification (cancel reminders). Also sent for every pet that is soft-deleted because its household was deleted (`household.deleted`) |
 | `health.vaccination.recorded` | health | `vaccinationId, petId, householdId, vaccine, administeredOn, nextDueDate?` | notification: if `nextDueDate`, reminders 7 days before and on the day, 09:00 user tz. Sent on create **and on every update** (same `vaccinationId`): replace this vaccination's pending reminders, and cancel them when `nextDueDate` is missing |
 | `health.medication.scheduled` | health | `medicationId, petId, householdId, name, dosage, startDate, endDate?, frequency, timeOfDay?` | notification: replace future reminders of this medication (max 30 days ahead, rolling) |

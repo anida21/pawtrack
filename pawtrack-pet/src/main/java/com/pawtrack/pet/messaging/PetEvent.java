@@ -26,6 +26,18 @@ public sealed interface PetEvent {
         }
     }
 
+    record PetUpdated(UUID petId, UUID householdId, String name, Species species) implements PetEvent {
+
+        public static PetUpdated of(Pet pet) {
+            return new PetUpdated(pet.getId(), pet.getHouseholdId(), pet.getName(), pet.getSpecies());
+        }
+
+        @Override
+        public String type() {
+            return "pet.updated";
+        }
+    }
+
     record PetDeleted(UUID petId, UUID householdId) implements PetEvent {
 
         public static PetDeleted of(Pet pet) {

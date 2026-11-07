@@ -26,14 +26,14 @@ Pets of a household and their profile photos. Layout copied from `../pawtrack-id
 - [x] `GET/POST /api/v1/pets` (filters, paging, sorted by name)
 - [x] `GET/PUT/DELETE /api/v1/pets/{petId}` (soft delete)
 - [x] `PUT/GET /api/v1/pets/{petId}/photo` (MinIO bucket `pet-photos`, 5 MB, jpeg/png/webp, 302 to 10-min pre-signed URL)
-- [x] Event publishing (`pet.created`, `pet.deleted`) after commit
+- [x] Event publishing (`pet.created`, `pet.updated`, `pet.deleted`) after commit
 - [x] `household.deleted` consumer: queue `pet.household-events` + DLQ, idempotent (`processed_events`), soft-deletes pets
 - [x] Tests for every endpoint incl. 400/401/403/404/413/415/503, consumer, identity client
 
 ## Conventions established here (copy them)
 - Services take the `Jwt` and return DTOs, so mapping runs inside the transaction (`open-in-view: false`).
 - Creation timestamps are set in entity constructors (not `@CreationTimestamp`, which only fills at flush).
-- Events: `PetEvent` records → `EventPublisher.publish(...)` → `RabbitEventRelay` (AFTER_COMMIT).
+- Events: `PetEvent` records (`PetCreated`, `PetUpdated`, `PetDeleted`) → `EventPublisher.publish(...)` → `RabbitEventRelay` (AFTER_COMMIT).
 - Consumers: listener takes the raw `Message` and parses the envelope itself (no dependency on the producer's
   `__TypeId__` header); unreadable → `AmqpRejectAndDontRequeueException` (straight to DLQ); other failures are
   retried 3× (`spring.rabbitmq.listener.simple.retry`), then dead-lettered (`default-requeue-rejected: false`).
@@ -51,8 +51,8 @@ Pets of a household and their profile photos. Layout copied from `../pawtrack-id
 ## Behaviour beyond the contract text
 - `pet.deleted` is also published for each pet soft-deleted by `household.deleted` (documented in events.md).
 - `GET /pets?householdId=<not a member>` → empty page (not 403).
-- `PUT` changing `householdId` moves the pet; needs OWNER/MEMBER in both households. No event is published for
-  updates (events.md has no `pet.updated`), so health/notification keep the old name/household until a contract adds one.
+- `PUT` changing `householdId` moves the pet; needs OWNER/MEMBER in both households. Every PUT publishes
+  `pet.updated` (new householdId, name, species), so health/notification can refresh their copy.
 - `birthDate` must not be in the future (400). `name` must not be blank.
 - Photo object key is `pets/{petId}` (one per pet, overwritten on upload); a soft-deleted pet keeps its object.
 - Photo format comes from the file's leading bytes, not the part's Content-Type.
