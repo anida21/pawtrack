@@ -41,7 +41,7 @@ mvn spring-boot:run
 | `PET_URL` | `http://localhost:8082` |
 | `DB_HOST` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` | local docker-compose values (`health_db`) |
 | `RABBITMQ_HOST` / `RABBITMQ_USER` / `RABBITMQ_PASSWORD` | local docker-compose values |
-| `KEYCLOAK_ISSUER_URI` | `http://keycloak.pawtrack.local:8180/realms/pawtrack` |
+| `KEYCLOAK_ISSUER_URI` | `http://keycloak.localhost:8180/realms/pawtrack` |
 
 ## Test
 ```bash

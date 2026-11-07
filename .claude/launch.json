@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "pawtrack-ui",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "pawtrack-ui", "start"],
+      "port": 4200
+    }
+  ]
+}

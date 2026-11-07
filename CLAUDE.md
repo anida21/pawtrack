@@ -16,7 +16,7 @@ tests and ships on its own (own `pom.xml`/`package.json`, own Dockerfile, own CI
 | `pawtrack-ui` | Angular | 4200 | localhost |
 
 Infra (from `pawtrack-development/docker-compose.yml`): Postgres 5432, Keycloak 8180
-(`keycloak.pawtrack.local`), RabbitMQ 5672/15672, MinIO 9000/9001, Mailpit 1025/8025.
+(`keycloak.localhost`), RabbitMQ 5672/15672, MinIO 9000/9001, Mailpit 1025/8025.
 
 ## Rules for agents (read before working)
 

@@ -23,7 +23,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://keycloak.pawtrack.local:8180/realms/pawtrack}
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://keycloak.localhost:8180/realms/pawtrack}
 
 pawtrack:
   events:

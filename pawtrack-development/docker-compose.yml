@@ -8,7 +8,7 @@ x-service-env: &service-env
   DB_HOST: postgres
   DB_PORT: 5432
   RABBITMQ_HOST: rabbitmq
-  KEYCLOAK_ISSUER_URI: http://keycloak.pawtrack.local:8180/realms/pawtrack
+  KEYCLOAK_ISSUER_URI: http://keycloak.localhost:8180/realms/pawtrack
 
 services:
   postgres:
@@ -16,7 +16,7 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-    ports: ["5432:5432"]
+    ports: ["${POSTGRES_HOST_PORT:-5432}:5432"]
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./docker-mounts/postgres:/docker-entrypoint-initdb.d:ro
@@ -36,8 +36,9 @@ services:
       KC_DB_USERNAME: keycloak
       KC_DB_PASSWORD: keycloak
       # Same URL inside Docker and from the browser -> identical JWT issuer everywhere.
+      # *.localhost resolves to 127.0.0.1 in browsers without a hosts entry; containers use the alias below.
       KC_HTTP_PORT: 8180
-      KC_HOSTNAME: http://keycloak.pawtrack.local:8180
+      KC_HOSTNAME: http://keycloak.localhost:8180
       KC_HEALTH_ENABLED: "true"
     ports: ["8180:8180"]
     volumes:
@@ -46,7 +47,7 @@ services:
       postgres: { condition: service_healthy }
     networks:
       default:
-        aliases: [keycloak.pawtrack.local]
+        aliases: [keycloak.localhost]
 
   rabbitmq:
     image: rabbitmq:4-management-alpine
@@ -90,7 +91,7 @@ services:
     profiles: [services]
     build: ../pawtrack-identity
     environment: { <<: *service-env, DB_NAME: identity_db, DB_USER: identity, DB_PASSWORD: identity }
-    ports: ["8081:8081"]
+    ports: ["${IDENTITY_HOST_PORT:-8081}:8081"]
     depends_on:
       postgres: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }

@@ -59,7 +59,7 @@ src/main/resources/
 
 | What | URL |
 |---|---|
-| Keycloak admin | http://keycloak.pawtrack.local:8180 (admin / admin) |
+| Keycloak admin | http://keycloak.localhost:8180 (admin / admin) |
 | RabbitMQ UI | http://localhost:15672 (pawtrack / pawtrack) |
 | MinIO console | http://localhost:9001 (pawtrack / pawtrack123) |
 | Mailpit | http://localhost:8025 |

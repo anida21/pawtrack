@@ -2,7 +2,6 @@
 # Needed so the browser and the containers see the same Keycloak issuer URL.
 $hostsFile = "$env:SystemRoot\System32\drivers\etc\hosts"
 $names = @(
-  "keycloak.pawtrack.local",
   "gateway.pawtrack.local",
   "identity.pawtrack.local",
   "pet.pawtrack.local",

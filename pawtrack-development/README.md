@@ -46,7 +46,7 @@ Architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · Contracts: [contra
 
 | What | URL | Login (local only) |
 |---|---|---|
-| Keycloak | http://keycloak.pawtrack.local:8180 | admin / admin |
+| Keycloak | http://keycloak.localhost:8180 | admin / admin |
 | Test users | realm `pawtrack` | alice@pawtrack.local / alice, bob@pawtrack.local / bob |
 | RabbitMQ | http://localhost:15672 | pawtrack / pawtrack |
 | MinIO | http://localhost:9001 | pawtrack / pawtrack123 |
@@ -59,7 +59,7 @@ Architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · Contracts: [contra
 ## Get a token (for curl / Postman)
 
 ```bash
-curl -s -X POST http://keycloak.pawtrack.local:8180/realms/pawtrack/protocol/openid-connect/token \
+curl -s -X POST http://keycloak.localhost:8180/realms/pawtrack/protocol/openid-connect/token \
   -d grant_type=password -d client_id=pawtrack-e2e \
   -d username=alice@pawtrack.local -d password=alice
 ```

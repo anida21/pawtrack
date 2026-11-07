@@ -23,7 +23,7 @@ Spring Boot 4 · Java 17 · Spring Cloud Gateway (Server Web MVC) · Keycloak (O
 | `PET_URL` | `http://localhost:8082` |
 | `HEALTH_URL` | `http://localhost:8083` |
 | `NOTIFICATION_URL` | `http://localhost:8084` |
-| `KEYCLOAK_ISSUER_URI` | `http://keycloak.pawtrack.local:8180/realms/pawtrack` |
+| `KEYCLOAK_ISSUER_URI` | `http://keycloak.localhost:8180/realms/pawtrack` |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:4200` (comma-separated list) |
 
 ## Run locally
