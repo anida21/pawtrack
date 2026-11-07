@@ -19,6 +19,14 @@ spring:
     port: 5672
     username: ${RABBITMQ_USER:pawtrack}
     password: ${RABBITMQ_PASSWORD:pawtrack}
+    listener:
+      simple:
+        # A message that still fails after the retries is rejected and goes to its .dlq (events.md).
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 500ms
   security:
     oauth2:
       resourceserver:
@@ -28,6 +36,8 @@ spring:
 pawtrack:
   events:
     exchange: pawtrack.events
+    dead-letter-exchange: pawtrack.events.dlx
+    replay-queue: identity.replay-requests
   invitations:
     validity-days: 7
 

@@ -41,6 +41,22 @@ class PetEventsTest extends IntegrationTest {
     }
 
     @Test
+    void petUpdated_upsertsTheLocalCopy_evenForAPetNotSeenBefore() {
+        UUID petId = UUID.randomUUID();
+        UUID householdId = UUID.randomUUID();
+        // Backfill (events.md): a replayed pet.updated may be the first event about this pet.
+        publish("pet.updated", data("petId", petId, "householdId", householdId, "name", "Luna", "species", "DOG"));
+        assertThat(petRepository.findById(petId).orElseThrow().getName()).isEqualTo("Luna");
+
+        UUID newHousehold = UUID.randomUUID();
+        publish("pet.updated", data("petId", petId, "householdId", newHousehold, "name", "Lunica", "species", "DOG"));
+
+        Pet pet = petRepository.findById(petId).orElseThrow();
+        assertThat(pet.getHouseholdId()).isEqualTo(newHousehold);
+        assertThat(pet.getName()).isEqualTo("Lunica");
+    }
+
+    @Test
     void petDeleted_cancelsPendingReminders_andStopsMedicationSchedules() throws Exception {
         TestUser owner = TestUser.random("Owner");
         TestHousehold home = household(owner);

@@ -35,6 +35,8 @@ Layout copied from `../pawtrack-identity` (the reference); consumer / HTTP clien
 - [x] `pet.created` / `pet.deleted` consumer: queue `health.pet-events` + DLQ, idempotent (`processed_events`),
       keeps the local pet copy, soft-deletes records of deleted pets
 - [x] Tests for every endpoint incl. 400/401/403/404/503, consumer, events, pet client
+- [x] `pet.updated` consumed as an upsert of the local copy; backfill: `messaging/ReplayRequester` publishes
+      `replay.requested` (pet.updated) on startup (`pawtrack.events.replay-on-startup`, events.md)
 
 ## Conventions established here (copy them)
 - Services take the `Jwt` and return DTOs, so mapping runs inside the transaction (`open-in-view: false`).

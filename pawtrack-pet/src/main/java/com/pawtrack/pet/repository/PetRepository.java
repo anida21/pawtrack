@@ -22,4 +22,7 @@ public interface PetRepository extends JpaRepository<Pet, UUID> {
                                                                Pageable pageable);
 
     List<Pet> findByHouseholdIdAndDeletedAtIsNull(UUID householdId);
+
+    /** All pets that are not deleted (backfill snapshot). */
+    List<Pet> findByDeletedAtIsNull();
 }

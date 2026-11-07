@@ -20,6 +20,7 @@ import org.springframework.context.annotation.Configuration;
 public class RabbitConfig {
 
     static final String PET_CREATED = "pet.created";
+    static final String PET_UPDATED = "pet.updated";
     static final String PET_DELETED = "pet.deleted";
 
     @Bean
@@ -62,6 +63,12 @@ public class RabbitConfig {
     @Bean
     Binding petCreatedBinding(Queue petEventsQueue, TopicExchange eventsExchange) {
         return BindingBuilder.bind(petEventsQueue).to(eventsExchange).with(PET_CREATED);
+    }
+
+    /** pet.updated is an upsert of the local copy; also the type pet answers a backfill request with. */
+    @Bean
+    Binding petUpdatedBinding(Queue petEventsQueue, TopicExchange eventsExchange) {
+        return BindingBuilder.bind(petEventsQueue).to(eventsExchange).with(PET_UPDATED);
     }
 
     @Bean

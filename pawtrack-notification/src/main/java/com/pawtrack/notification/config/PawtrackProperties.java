@@ -19,7 +19,10 @@ public record PawtrackProperties(
     @Valid @NotNull Mail mail
 ) {
 
-    public record Events(@NotBlank String exchange, @NotBlank String deadLetterExchange) {
+    /**
+     * @param replayOnStartup publish {@code replay.requested} when the service starts (backfill, events.md)
+     */
+    public record Events(@NotBlank String exchange, @NotBlank String deadLetterExchange, boolean replayOnStartup) {
     }
 
     /**

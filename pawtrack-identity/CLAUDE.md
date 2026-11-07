@@ -25,6 +25,8 @@
 - [x] Invitations (secure random code, 7 days, email must match accepting user, 410 if expired)
 - [x] Event publishing (`household.*`, `user.updated`)
 - [x] Tests for every endpoint incl. 401/403/404/409
+- [x] Backfill (events.md): queue `identity.replay-requests` (+ DLQ) answers `replay.requested` by republishing
+      `user.updated` per user and `household.member.added` per membership (`service/ReplayService`)
 
 ## Conventions established here (copy them)
 - Services take the `Jwt`, call `UserService.currentUser(jwt)` (provisions on first use) and return DTOs,

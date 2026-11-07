@@ -104,7 +104,8 @@ class RestIdentityClientTest {
 
     private static PawtrackProperties properties() {
         return new PawtrackProperties(
-            new PawtrackProperties.Events("pawtrack.events", "pawtrack.events.dlx", "pet.household-events"),
+            new PawtrackProperties.Events("pawtrack.events", "pawtrack.events.dlx", "pet.household-events",
+                "pet.replay-requests"),
             new PawtrackProperties.Identity("http://identity.test", Duration.ofSeconds(60),
                 Duration.ofSeconds(1), Duration.ofSeconds(1)),
             new PawtrackProperties.Photos("http://minio", "http://minio", "key", "secret", "pet-photos",

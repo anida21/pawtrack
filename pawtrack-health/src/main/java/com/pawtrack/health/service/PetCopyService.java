@@ -32,14 +32,19 @@ public class PetCopyService {
     private final MedicationRepository medications;
     private final WeightRepository weights;
 
-    /** @return {@code false} for a redelivered event */
+    /**
+     * Applies pet.created or pet.updated (also the backfill answer, events.md): insert or update the local copy.
+     * A pet already known as deleted stays deleted.
+     *
+     * @return {@code false} for a redelivered event
+     */
     @Transactional
-    public boolean petCreated(UUID eventId, UUID petId, UUID householdId, String name) {
-        if (!markProcessed(eventId, PetEventMessage.PET_CREATED)) {
+    public boolean petUpserted(UUID eventId, String type, UUID petId, UUID householdId, String name) {
+        if (!markProcessed(eventId, type)) {
             return false;
         }
         petCopies.upsert(petId, householdId, name, Instant.now());
-        log.info("Pet {} created in household {}", petId, householdId);
+        log.info("Pet {} ({}) in household {}", petId, type, householdId);
         return true;
     }
 

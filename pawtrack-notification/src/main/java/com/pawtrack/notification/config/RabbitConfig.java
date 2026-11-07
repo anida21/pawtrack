@@ -29,7 +29,7 @@ public class RabbitConfig {
     /** Routing keys (= event types) each queue is bound with. */
     static final Map<String, List<String>> BINDINGS = Map.of(
         IDENTITY_QUEUE, List.of("household.#", "user.updated"),
-        PET_QUEUE, List.of("pet.created", "pet.deleted"),
+        PET_QUEUE, List.of("pet.created", "pet.updated", "pet.deleted"),
         HEALTH_QUEUE, List.of("health.vaccination.recorded", "health.medication.scheduled",
             "health.medication.cancelled"));
 

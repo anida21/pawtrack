@@ -22,7 +22,7 @@ Reminders (from health events + custom ones) and email (Mailpit locally). Port 8
 
 ## How it works
 - Queues (one per producer, each with `<queue>.dlq` on the direct DLX `pawtrack.events.dlx`):
-  `notification.identity-events` (`household.#`, `user.updated`), `notification.pet-events` (`pet.created`, `pet.deleted`),
+  `notification.identity-events` (`household.#`, `user.updated`), `notification.pet-events` (`pet.created|updated|deleted`),
   `notification.health-events` (`health.vaccination.recorded`, `health.medication.scheduled|cancelled`).
 - `RabbitEventListener` parses the envelope → `EventHandlingService.handle` (one transaction): claims the eventId with
   `INSERT … ON CONFLICT DO NOTHING` (0 rows = duplicate → skip). Failures retry 3× then dead-letter.
@@ -39,8 +39,13 @@ Reminders (from health events + custom ones) and email (Mailpit locally). Port 8
 - Test support: `IntegrationTest.publish(type, data)` sends an event and waits until it is processed;
   `household(users…)` builds memberships + a pet through events; `Mailpit` reads sent mail (HttpURLConnection, not JDK HttpClient).
 
+## Backfill (events.md)
+- `messaging/ReplayRequester` publishes `replay.requested` (user.updated, household.member.added, pet.updated) on
+  `ApplicationReadyEvent` (`pawtrack.events.replay-on-startup`). Identity and pet answer with snapshots; every
+  consumed type is an upsert, so repeated replays change nothing.
+- `pet.updated` is bound to `notification.pet-events` and handled like `pet.created` (upsert).
+
 ## Known gaps (not in the contract)
-- No `pet.updated` event: pet name / household move is not reflected in reminders.
 - Vaccination DELETE sends no event, so its reminders stay (needs e.g. `health.vaccination.deleted`).
 - Reminders keep the household time zone of when they were generated.
 

@@ -2,6 +2,7 @@ package com.pawtrack.pet.config;
 
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
+import org.springframework.amqp.core.Declarables;
 import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.QueueBuilder;
@@ -20,6 +21,7 @@ import org.springframework.context.annotation.Configuration;
 public class RabbitConfig {
 
     static final String HOUSEHOLD_DELETED = "household.deleted";
+    static final String REPLAY_REQUESTED = "replay.requested";
 
     @Bean
     TopicExchange eventsExchange(PawtrackProperties properties) {
@@ -72,5 +74,22 @@ public class RabbitConfig {
 
     static String dlqName(PawtrackProperties.Events events) {
         return events.householdQueue() + ".dlq";
+    }
+
+    // ---- consumer: replay requests (backfill, events.md) ---------------------------------------------------
+
+    @Bean
+    Declarables replayRequestQueue(PawtrackProperties properties, TopicExchange eventsExchange,
+                                   DirectExchange deadLetterExchange) {
+        String queueName = properties.events().replayQueue();
+        String replayDlq = queueName + ".dlq";
+        Queue queue = QueueBuilder.durable(queueName)
+            .deadLetterExchange(deadLetterExchange.getName())
+            .deadLetterRoutingKey(replayDlq)
+            .build();
+        Queue dlq = QueueBuilder.durable(replayDlq).build();
+        return new Declarables(queue, dlq,
+            BindingBuilder.bind(queue).to(eventsExchange).with(REPLAY_REQUESTED),
+            BindingBuilder.bind(dlq).to(deadLetterExchange).with(replayDlq));
     }
 }

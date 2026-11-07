@@ -10,7 +10,7 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Consumes {@code pet.created} and {@code pet.deleted} from {@code health.pet-events}. The raw body is parsed here
+ * Consumes {@code pet.created}, {@code pet.updated} (both upserts) and {@code pet.deleted} from {@code health.pet-events}. The raw body is parsed here
  * (instead of relying on the producer's type headers), so only the envelope fields from events.md matter.
  * Unreadable messages are dead-lettered at once; processing failures are retried, then dead-lettered.
  */
@@ -25,8 +25,8 @@ public class PetEventListener {
     public void onMessage(Message message) {
         PetEventMessage event = parse(message);
         PetEventMessage.Data data = event.data();
-        if (PetEventMessage.PET_CREATED.equals(event.type())) {
-            petCopyService.petCreated(event.eventId(), data.petId(), data.householdId(), data.name());
+        if (event.isUpsert()) {
+            petCopyService.petUpserted(event.eventId(), event.type(), data.petId(), data.householdId(), data.name());
         } else {
             petCopyService.petDeleted(event.eventId(), data.petId(), data.householdId());
         }
@@ -40,7 +40,8 @@ public class PetEventListener {
             throw new AmqpRejectAndDontRequeueException("Unreadable pet event", ex);
         }
         if (event == null || !event.isValid()) {
-            throw new AmqpRejectAndDontRequeueException("Not a valid pet.created / pet.deleted event: " + event);
+            throw new AmqpRejectAndDontRequeueException("Not a valid pet.created / pet.updated / pet.deleted event: "
+                + event);
         }
         return event;
     }

@@ -20,7 +20,8 @@ public record PawtrackProperties(
 
     public record Events(@NotBlank String exchange,
                          @NotBlank String deadLetterExchange,
-                         @NotBlank String householdQueue) {
+                         @NotBlank String householdQueue,
+                         @NotBlank String replayQueue) {
     }
 
     /** Identity service, the authority for household memberships. */

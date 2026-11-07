@@ -69,6 +69,27 @@ class PetEventListenerTest extends IntegrationTest {
     }
 
     @Test
+    void petUpdatedUpsertsTheLocalCopy() {
+        UUID petId = UUID.randomUUID();
+        UUID householdId = UUID.randomUUID();
+        UUID first = UUID.randomUUID();
+
+        // Backfill (events.md): a replayed pet.updated may be the first event about this pet.
+        sendPetUpdated(first, petId, householdId, "Luna");
+        await().atMost(TIMEOUT).until(() -> processedEvents.existsById(first));
+        assertThat(petCopies.findById(petId)).hasValueSatisfying(copy -> assertThat(copy.getName()).isEqualTo("Luna"));
+
+        UUID movedTo = UUID.randomUUID();
+        UUID second = UUID.randomUUID();
+        sendPetUpdated(second, petId, movedTo, "Lunica");
+        await().atMost(TIMEOUT).until(() -> processedEvents.existsById(second));
+        assertThat(petCopies.findById(petId)).hasValueSatisfying(copy -> {
+            assertThat(copy.getHouseholdId()).isEqualTo(movedTo);
+            assertThat(copy.getName()).isEqualTo("Lunica");
+        });
+    }
+
+    @Test
     void petDeletedSoftDeletesAllRecordsOfThePet() throws Exception {
         UUID petId = pets.create(owner, "Luna");
         UUID keptPet = pets.create(owner, "Momo");
@@ -158,6 +179,14 @@ class PetEventListenerTest extends IntegrationTest {
              "data":{"petId":"%s","householdId":"%s","name":"%s","species":"DOG"}}"""
             .formatted(eventId, Instant.now(), petId, householdId, name);
         rabbitTemplate.send(EXCHANGE, PetEventMessage.PET_CREATED, json(body));
+    }
+
+    private void sendPetUpdated(UUID eventId, UUID petId, UUID householdId, String name) {
+        String body = """
+            {"eventId":"%s","type":"pet.updated","occurredAt":"%s","producer":"pawtrack-pet",
+             "data":{"petId":"%s","householdId":"%s","name":"%s","species":"DOG"}}"""
+            .formatted(eventId, Instant.now(), petId, householdId, name);
+        rabbitTemplate.send(EXCHANGE, PetEventMessage.PET_UPDATED, json(body));
     }
 
     private void sendPetDeleted(UUID eventId, UUID petId, UUID householdId) {

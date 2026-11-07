@@ -38,6 +38,8 @@ pawtrack:
     exchange: pawtrack.events
     dead-letter-exchange: pawtrack.events.dlx
     pet-queue: health.pet-events
+    # Ask pet to republish all pets on startup (backfill, events.md).
+    replay-on-startup: true
   pet:
     url: ${PET_URL:http://localhost:8082}
     connect-timeout: 2s

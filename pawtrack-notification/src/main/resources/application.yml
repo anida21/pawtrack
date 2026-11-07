@@ -40,6 +40,7 @@ pawtrack:
   events:
     exchange: pawtrack.events
     dead-letter-exchange: pawtrack.events.dlx
+    replay-on-startup: true
   reminders:
     # Spring cron (6 fields); "-" disables a job.
     dispatch-cron: ${REMINDER_DISPATCH_CRON:0 * * * * *}

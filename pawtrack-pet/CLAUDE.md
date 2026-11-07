@@ -29,6 +29,8 @@ Pets of a household and their profile photos. Layout copied from `../pawtrack-id
 - [x] Event publishing (`pet.created`, `pet.updated`, `pet.deleted`) after commit
 - [x] `household.deleted` consumer: queue `pet.household-events` + DLQ, idempotent (`processed_events`), soft-deletes pets
 - [x] Tests for every endpoint incl. 400/401/403/404/413/415/503, consumer, identity client
+- [x] Backfill (events.md): queue `pet.replay-requests` (+ DLQ) answers `replay.requested` with `pet.updated`
+      for every pet that is not deleted (`service/ReplayService`)
 
 ## Conventions established here (copy them)
 - Services take the `Jwt` and return DTOs, so mapping runs inside the transaction (`open-in-view: false`).

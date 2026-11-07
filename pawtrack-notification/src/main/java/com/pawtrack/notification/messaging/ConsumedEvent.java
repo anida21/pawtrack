@@ -14,18 +14,22 @@ import com.pawtrack.notification.entity.MedicationFrequency;
  */
 public sealed interface ConsumedEvent {
 
-    /** Event type (routing key) → record it is read into. Other types are acknowledged and ignored. */
-    Map<String, Class<? extends ConsumedEvent>> TYPES = Map.of(
-        "household.member.added", HouseholdMemberAdded.class,
-        "household.member.removed", HouseholdMemberRemoved.class,
-        "household.deleted", HouseholdDeleted.class,
-        "household.invitation.created", HouseholdInvitationCreated.class,
-        "user.updated", UserUpdated.class,
-        "pet.created", PetCreated.class,
-        "pet.deleted", PetDeleted.class,
-        "health.vaccination.recorded", VaccinationRecorded.class,
-        "health.medication.scheduled", MedicationScheduled.class,
-        "health.medication.cancelled", MedicationCancelled.class);
+    /**
+     * Event type (routing key) → record it is read into. Other types are acknowledged and ignored.
+     * {@code pet.updated} carries the same fields as {@code pet.created} and is applied the same way (upsert).
+     */
+    Map<String, Class<? extends ConsumedEvent>> TYPES = Map.ofEntries(
+        Map.entry("household.member.added", HouseholdMemberAdded.class),
+        Map.entry("household.member.removed", HouseholdMemberRemoved.class),
+        Map.entry("household.deleted", HouseholdDeleted.class),
+        Map.entry("household.invitation.created", HouseholdInvitationCreated.class),
+        Map.entry("user.updated", UserUpdated.class),
+        Map.entry("pet.created", PetCreated.class),
+        Map.entry("pet.updated", PetCreated.class),
+        Map.entry("pet.deleted", PetDeleted.class),
+        Map.entry("health.vaccination.recorded", VaccinationRecorded.class),
+        Map.entry("health.medication.scheduled", MedicationScheduled.class),
+        Map.entry("health.medication.cancelled", MedicationCancelled.class));
 
     record HouseholdMemberAdded(UUID householdId, UUID userId, String role) implements ConsumedEvent {
     }

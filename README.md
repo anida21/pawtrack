@@ -68,7 +68,8 @@ More detail: [docs/ARCHITECTURE.md](pawtrack-development/docs/ARCHITECTURE.md)
   for access checks and keep small local copies of the data they need, built from events.
 - **Event-driven design on RabbitMQ.** A versioned event envelope, published **after commit**. Every consumer
   has a dead-letter queue and is **idempotent** (processed event ids are stored), and failed messages
-  can be replayed (`scripts/replay-dlq.mjs`).
+  can be replayed (`scripts/replay-dlq.mjs`). A consumer that starts late asks the producers for a snapshot
+  of their current state (`replay.requested`), so its local copies are complete.
 - **Contract-first APIs.** OpenAPI files in [`contracts/`](pawtrack-development/contracts) are the source of
   truth. The UI generates its TypeScript API types from them.
 - **Security with OAuth2 / OpenID Connect.** Keycloak issues the tokens, the UI signs in with code flow +
@@ -128,7 +129,8 @@ pawtrack/
 
 ## Roadmap
 
-- [ ] Backfill for consumers that start after events were published (outbox / replay endpoint)
+- [x] Backfill for consumers that start after events were published (`replay.requested` snapshots)
+- [ ] Transactional outbox, so an event is never lost when RabbitMQ is down at commit time
 - [ ] Evict the pet service's membership cache on `household.member.removed`
 - [ ] End-to-end API tests (Jest + TypeScript, clients generated from the contracts)
 - [ ] Observability: Prometheus + Grafana, distributed tracing

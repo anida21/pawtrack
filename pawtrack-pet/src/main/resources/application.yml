@@ -44,6 +44,7 @@ pawtrack:
     exchange: pawtrack.events
     dead-letter-exchange: pawtrack.events.dlx
     household-queue: pet.household-events
+    replay-queue: pet.replay-requests
   identity:
     url: ${IDENTITY_URL:http://localhost:8081}
     membership-cache-ttl: 60s

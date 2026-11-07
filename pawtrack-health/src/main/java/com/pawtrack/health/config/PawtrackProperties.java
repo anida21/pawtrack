@@ -18,7 +18,8 @@ public record PawtrackProperties(
 
     public record Events(@NotBlank String exchange,
                          @NotBlank String deadLetterExchange,
-                         @NotBlank String petQueue) {
+                         @NotBlank String petQueue,
+                         boolean replayOnStartup) {
     }
 
     /** Pet service, the authority for "may this caller see this pet" (health.yaml access rule). */
