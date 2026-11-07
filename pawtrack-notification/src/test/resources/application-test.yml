@@ -1,0 +1,18 @@
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Never contacted in tests: use .with(jwt()) from spring-security-test.
+          issuer-uri: http://localhost:0/realms/pawtrack
+  rabbitmq:
+    listener:
+      simple:
+        retry:
+          initial-interval: 100ms
+
+pawtrack:
+  reminders:
+    # Tests call ReminderDispatcher / MedicationReminderService directly instead of waiting for cron.
+    dispatch-cron: "-"
+    medication-top-up-cron: "-"

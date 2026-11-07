@@ -1,11 +1,22 @@
 openapi: 3.0.3
 info:
   title: PawTrack Notification API
-  version: 1.0.0
+  version: 1.1.0
   description: |
     Reminders are created mostly from events (see events.md), but users can also add custom ones.
     A scheduler (every minute) sends due reminders by email (Mailpit locally) and marks them SENT.
     Recipients = all members of the pet's household with emailNotifications=true.
+
+    Access: notification keeps a local copy of household memberships (household.member.* events) and pets
+    (pet.* events). Any member of the pet's household (OWNER, MEMBER, SITTER) may read and change its reminders.
+    A pet or reminder that notification does not know is 404; one in a household the caller is not a member of is 403.
+
+    Status transitions: PENDING → SENT (scheduler), PENDING|SENT → DONE, PENDING|SENT → CANCELLED.
+    Repeating DONE or CANCELLED on a reminder that already has that status is a no-op; DONE ↔ CANCELLED is 409.
+
+    Event-generated reminders (dueAt at 09:00 for vaccinations, at timeOfDay for medications) use the timezone of
+    the household OWNER (from user.updated), else of another member, else Europe/Sarajevo. Reminders whose
+    dueAt would already be in the past when generated are skipped.
 servers:
   - url: http://notification.pawtrack.local:8084
 security:
@@ -14,6 +25,9 @@ paths:
   /api/v1/reminders:
     get:
       summary: Upcoming reminders for pets in the caller's households.
+      description: |
+        All filters are optional and combined with AND. `from` is inclusive, `to` exclusive (both on dueAt).
+        Without `status` every status is returned. Sorted by dueAt ascending, then id.
       operationId: listReminders
       parameters:
         - { name: petId, in: query, schema: { type: string, format: uuid } }
@@ -22,27 +36,47 @@ paths:
         - { name: to, in: query, schema: { type: string, format: date-time } }
       responses:
         '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Reminder' } } } } }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { description: Missing or invalid token }
     post:
       summary: Custom reminder (source=CUSTOM).
+      description: dueAt may be in the past; the reminder is then sent on the next scheduler run.
       operationId: createReminder
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ReminderRequest' } } } }
       responses:
         '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Reminder' } } } }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { description: Missing or invalid token }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
   /api/v1/reminders/{id}:
     parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
     delete:
       summary: Cancel (status=CANCELLED).
       operationId: cancelReminder
-      responses: { '204': { description: Cancelled } }
+      responses:
+        '204': { description: Cancelled }
+        '401': { description: Missing or invalid token }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
   /api/v1/reminders/{id}/done:
     parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
     post:
       operationId: markReminderDone
       responses:
         '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Reminder' } } } }
+        '401': { description: Missing or invalid token }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
 components:
   securitySchemes:
     bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  responses:
+    Problem:
+      description: RFC 7807 problem
+      content: { application/problem+json: { schema: { type: object } } }
   schemas:
     ReminderStatus:
       type: string
@@ -52,7 +86,7 @@ components:
       required: [petId, title, dueAt]
       properties:
         petId: { type: string, format: uuid }
-        title: { type: string, maxLength: 120 }
+        title: { type: string, minLength: 1, maxLength: 120 }
         message: { type: string, maxLength: 1000 }
         dueAt: { type: string, format: date-time }
     Reminder:
@@ -63,6 +97,6 @@ components:
             id: { type: string, format: uuid }
             householdId: { type: string, format: uuid }
             source: { type: string, enum: [VACCINATION, MEDICATION, CUSTOM] }
-            sourceId: { type: string, format: uuid }
+            sourceId: { type: string, format: uuid, description: vaccinationId / medicationId, absent for CUSTOM }
             status: { $ref: '#/components/schemas/ReminderStatus' }
             sentAt: { type: string, format: date-time }

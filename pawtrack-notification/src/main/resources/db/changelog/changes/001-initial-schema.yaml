@@ -1,0 +1,153 @@
+databaseChangeLog:
+  # ---- local copies kept from events (identity, pet) ------------------------------------------------------------
+  - changeSet:
+      id: 001-recipients
+      author: pawtrack
+      changes:
+        - createTable:
+            tableName: recipients
+            remarks: Copy of identity users from user.updated
+            columns:
+              - column: { name: user_id, type: uuid, constraints: { primaryKey: true } }
+              - column: { name: email, type: varchar(255), constraints: { nullable: false } }
+              - column: { name: display_name, type: varchar(100) }
+              - column: { name: timezone, type: varchar(64), constraints: { nullable: false } }
+              - column: { name: email_notifications, type: boolean, constraints: { nullable: false } }
+              - column: { name: updated_at, type: timestamptz, constraints: { nullable: false } }
+
+  - changeSet:
+      id: 001-household-members
+      author: pawtrack
+      changes:
+        - createTable:
+            tableName: household_members
+            remarks: Copy of identity memberships from household.member.* / household.deleted
+            columns:
+              - column: { name: household_id, type: uuid, constraints: { nullable: false } }
+              - column: { name: user_id, type: uuid, constraints: { nullable: false } }
+              - column: { name: role, type: varchar(20), constraints: { nullable: false } }
+              - column: { name: joined_at, type: timestamptz, constraints: { nullable: false } }
+        - addPrimaryKey:
+            tableName: household_members
+            columnNames: household_id, user_id
+            constraintName: pk_household_members
+        - createIndex:
+            tableName: household_members
+            indexName: ix_household_members_user
+            columns:
+              - column: { name: user_id }
+
+  - changeSet:
+      id: 001-pets
+      author: pawtrack
+      changes:
+        - createTable:
+            tableName: pets
+            remarks: Copy of pets from pet.created / pet.deleted
+            columns:
+              - column: { name: pet_id, type: uuid, constraints: { primaryKey: true } }
+              - column: { name: household_id, type: uuid, constraints: { nullable: false } }
+              - column: { name: name, type: varchar(100), constraints: { nullable: false } }
+              - column: { name: deleted, type: boolean, defaultValueBoolean: false, constraints: { nullable: false } }
+        - createIndex:
+            tableName: pets
+            indexName: ix_pets_household
+            columns:
+              - column: { name: household_id }
+
+  # ---- own data -----------------------------------------------------------------------------------------------
+  - changeSet:
+      id: 001-reminders
+      author: pawtrack
+      changes:
+        - createTable:
+            tableName: reminders
+            columns:
+              - column: { name: id, type: uuid, constraints: { primaryKey: true } }
+              - column: { name: pet_id, type: uuid, constraints: { nullable: false } }
+              - column: { name: household_id, type: uuid, constraints: { nullable: false } }
+              - column: { name: title, type: varchar(120), constraints: { nullable: false } }
+              - column: { name: message, type: varchar(1000) }
+              - column: { name: due_at, type: timestamptz, constraints: { nullable: false } }
+              - column: { name: source, type: varchar(20), constraints: { nullable: false } }   # VACCINATION | MEDICATION | CUSTOM
+              - column: { name: source_id, type: uuid }
+              - column: { name: status, type: varchar(20), constraints: { nullable: false } }   # PENDING | SENT | DONE | CANCELLED
+              - column: { name: sent_at, type: timestamptz }
+              - column: { name: created_by, type: uuid }   # null for event-generated reminders
+              - column: { name: created_at, type: timestamptz, constraints: { nullable: false } }
+              - column: { name: updated_at, type: timestamptz }
+        - createIndex:
+            tableName: reminders
+            indexName: ix_reminders_household_due
+            columns:
+              - column: { name: household_id }
+              - column: { name: due_at }
+        - createIndex:
+            tableName: reminders
+            indexName: ix_reminders_status_due
+            columns:
+              - column: { name: status }
+              - column: { name: due_at }
+        - createIndex:
+            tableName: reminders
+            indexName: ix_reminders_source
+            columns:
+              - column: { name: source }
+              - column: { name: source_id }
+        - createIndex:
+            tableName: reminders
+            indexName: ix_reminders_pet
+            columns:
+              - column: { name: pet_id }
+
+  - changeSet:
+      id: 001-medication-schedules
+      author: pawtrack
+      changes:
+        - createTable:
+            tableName: medication_schedules
+            remarks: Last health.medication.scheduled per medication; reminders are generated up to generated_until (rolling)
+            columns:
+              - column: { name: medication_id, type: uuid, constraints: { primaryKey: true } }
+              - column: { name: pet_id, type: uuid, constraints: { nullable: false } }
+              - column: { name: household_id, type: uuid, constraints: { nullable: false } }
+              - column: { name: name, type: varchar(100), constraints: { nullable: false } }
+              - column: { name: dosage, type: varchar(60), constraints: { nullable: false } }
+              - column: { name: start_date, type: date, constraints: { nullable: false } }
+              - column: { name: end_date, type: date }
+              - column: { name: frequency, type: varchar(20), constraints: { nullable: false } }   # ONCE | DAILY | TWICE_DAILY | WEEKLY | MONTHLY
+              - column: { name: time_of_day, type: time }
+              - column: { name: active, type: boolean, constraints: { nullable: false } }
+              - column: { name: generated_until, type: timestamptz, constraints: { nullable: false } }
+              - column: { name: updated_at, type: timestamptz, constraints: { nullable: false } }
+
+  - changeSet:
+      id: 001-email-log
+      author: pawtrack
+      changes:
+        - createTable:
+            tableName: email_log
+            columns:
+              - column: { name: id, type: uuid, constraints: { primaryKey: true } }
+              - column: { name: kind, type: varchar(20), constraints: { nullable: false } }   # REMINDER | INVITATION
+              - column: { name: reference_id, type: uuid }   # reminder id / household id
+              - column: { name: recipient, type: varchar(255), constraints: { nullable: false } }
+              - column: { name: subject, type: varchar(255), constraints: { nullable: false } }
+              - column: { name: sent_at, type: timestamptz, constraints: { nullable: false } }
+        - createIndex:
+            tableName: email_log
+            indexName: ix_email_log_reference
+            columns:
+              - column: { name: reference_id }
+
+  - changeSet:
+      id: 001-processed-events
+      author: pawtrack
+      changes:
+        - createTable:
+            tableName: processed_events
+            remarks: Consumed eventIds, so redelivered events are ignored (idempotent consumers)
+            columns:
+              - column: { name: event_id, type: uuid, constraints: { primaryKey: true } }
+              - column: { name: type, type: varchar(100), constraints: { nullable: false } }
+              - column: { name: processed_at, type: timestamptz, constraints: { nullable: false } }
