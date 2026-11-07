@@ -6,7 +6,8 @@ records and reminders. Angular 21 + Angular Material 3, signed in through Keyclo
 ## Run locally
 
 Prerequisites: Node 20.19+ (CI uses 22), the PawTrack stack from `../pawtrack-development`
-(`docker compose --profile services up`) and the hosts entry `127.0.0.1 keycloak.pawtrack.local`.
+(`docker compose --profile services up`). Keycloak is reached at `keycloak.localhost:8180`, which resolves
+to 127.0.0.1 without a hosts entry.
 
 ```bash
 npm ci

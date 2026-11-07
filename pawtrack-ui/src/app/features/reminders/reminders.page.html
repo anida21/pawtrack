@@ -1,0 +1,78 @@
+<header class="page-header">
+  <h1>Reminders</h1>
+  <button mat-flat-button (click)="create()" [disabled]="pets().length === 0"><mat-icon>add</mat-icon> New reminder</button>
+  <p class="subtitle">Vaccination and medication reminders appear here automatically and are sent by email.</p>
+</header>
+
+<div class="filters">
+  <mat-button-toggle-group [value]="currentView()" (change)="navigate({ view: $event.value })" aria-label="Show"
+    hideSingleSelectionIndicator>
+    <mat-button-toggle value="open">Open</mat-button-toggle>
+    <mat-button-toggle value="DONE">Done</mat-button-toggle>
+    <mat-button-toggle value="CANCELLED">Cancelled</mat-button-toggle>
+  </mat-button-toggle-group>
+  <mat-form-field subscriptSizing="dynamic">
+    <mat-label>Pet</mat-label>
+    <mat-select [value]="petId() ?? ''" (selectionChange)="navigate({ petId: $event.value })">
+      <mat-option value="">All pets</mat-option>
+      @for (pet of pets(); track pet.id) {
+        <mat-option [value]="pet.id">{{ pet.name }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+</div>
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" aria-label="Loading reminders" />
+} @else if (error(); as err) {
+  <app-error-state [error]="err" (retry)="load()" />
+} @else if (groups().length === 0) {
+  <div class="state-card">
+    <mat-icon class="state-icon">{{ currentView() === 'open' ? 'notifications_off' : 'inventory_2' }}</mat-icon>
+    <h2>{{ currentView() === 'open' ? 'Nothing coming up' : 'Nothing here' }}</h2>
+    <p>
+      @if (currentView() === 'open') {
+        Add a vaccination with a next due date or a medication, or create your own reminder.
+      } @else {
+        Reminders you {{ currentView() === 'DONE' ? 'mark as done' : 'cancel' }} show up here.
+      }
+    </p>
+  </div>
+} @else {
+  @for (group of groups(); track group.key) {
+    <section class="group" [attr.aria-labelledby]="'group-' + group.key">
+      <h2 [id]="'group-' + group.key" class="group-title" [class.overdue]="group.key === 'overdue'">
+        @if (group.key === 'overdue') { <mat-icon inline>warning</mat-icon> }
+        {{ group.label }} <span class="count">{{ group.reminders.length }}</span>
+      </h2>
+      <ul class="reminders" role="list">
+        @for (r of group.reminders; track r.id) {
+          <li class="reminder">
+            <span class="icon" [attr.aria-label]="(r.source ?? 'CUSTOM').toLowerCase() + ' reminder'">
+              <mat-icon>{{ sourceIcons[r.source ?? 'CUSTOM'] }}</mat-icon>
+            </span>
+            <span class="main">
+              <span class="title">{{ r.title }}</span>
+              <span class="meta">
+                <a [routerLink]="['/pets', r.petId]">{{ petName(r.petId) }}</a>
+                · {{ r.dueAt | date: 'EEE, MMM d, y, HH:mm' }}
+                @if (r.status === 'SENT') {
+                  · <span class="sent"><mat-icon inline>mark_email_read</mat-icon> email sent</span>
+                }
+              </span>
+              @if (r.message) { <span class="message">{{ r.message }}</span> }
+            </span>
+            @if (isOpen(r)) {
+              <span class="actions">
+                <button mat-icon-button (click)="markDone(r)" [disabled]="busyId() === r.id"
+                  [attr.aria-label]="'Mark ' + r.title + ' as done'" matTooltip="Done"><mat-icon>check_circle</mat-icon></button>
+                <button mat-icon-button (click)="cancel(r)" [disabled]="busyId() === r.id"
+                  [attr.aria-label]="'Cancel ' + r.title" matTooltip="Cancel"><mat-icon>cancel</mat-icon></button>
+              </span>
+            }
+          </li>
+        }
+      </ul>
+    </section>
+  }
+}

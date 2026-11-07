@@ -15,6 +15,7 @@ import { PetPhotoCache } from '../../core/pet-photo-cache.service';
 import { SessionStore } from '../../core/session.store';
 import { confirm } from '../../shared/confirm-dialog';
 import { ErrorState } from '../../shared/error-state';
+import { HealthSection } from '../health/health-section';
 import { PetPhoto } from '../../shared/pet-photo';
 import { AgePipe, SEX_LABELS, SpeciesPipe } from '../../shared/species';
 
@@ -38,6 +39,7 @@ export function photoProblem(file: File): string | null {
     MatProgressBarModule,
     MatProgressSpinnerModule,
     ErrorState,
+    HealthSection,
     PetPhoto,
     SpeciesPipe,
     AgePipe,

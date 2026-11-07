@@ -1,0 +1,208 @@
+<section class="health" aria-labelledby="health-title">
+  <h2 id="health-title" class="title"><mat-icon>monitor_heart</mat-icon> Health</h2>
+
+  <!-- Summary tiles -->
+  @if (summaryError(); as err) {
+    <p class="inline-error" role="alert">
+      <mat-icon>error</mat-icon> {{ err.message }}
+      <button mat-button (click)="loadSummary()">Try again</button>
+    </p>
+  } @else {
+    @let s = summary();
+    <div class="tiles">
+      <div class="tile">
+        <span class="tile-label">Weight</span>
+        <span class="tile-value">{{ typeof s?.latestWeightKg === 'number' ? (s?.latestWeightKg | number: '1.0-2') + ' kg' : '–' }}</span>
+      </div>
+      <div class="tile">
+        <span class="tile-label">Last vet visit</span>
+        <span class="tile-value">{{ s?.lastVetVisit ? (s?.lastVetVisit | date: 'mediumDate') : '–' }}</span>
+      </div>
+      <div class="tile" [class.warn]="(s?.overdueVaccinations ?? 0) > 0">
+        <span class="tile-label">Next vaccination</span>
+        <span class="tile-value">{{
+          s?.nextVaccinationDue ? (s?.nextVaccinationDue | date: 'mediumDate') : (s?.overdueVaccinations ?? 0) > 0 ? 'Overdue' : '–'
+        }}</span>
+        @if ((s?.overdueVaccinations ?? 0) > 0) {
+          <span class="tile-note"><mat-icon inline>warning</mat-icon> {{ s?.overdueVaccinations }} overdue</span>
+        }
+      </div>
+      <div class="tile">
+        <span class="tile-label">Active medications</span>
+        <span class="tile-value">{{ s?.activeMedications ?? '–' }}</span>
+      </div>
+    </div>
+  }
+
+  <mat-tab-group mat-stretch-tabs="false" animationDuration="0ms" class="tabs">
+    <!-- Vaccinations -->
+    <mat-tab label="Vaccinations">
+      <div class="tab-head">
+        <p>Newest first. A next due date creates an email reminder.</p>
+        <button mat-flat-button (click)="edit(VaccinationDialog, vaccinations, 'Vaccination')">
+          <mat-icon>add</mat-icon> Add
+        </button>
+      </div>
+      @if (vaccinations.loading()) {
+        <mat-progress-bar mode="indeterminate" aria-label="Loading vaccinations" />
+      } @else if (vaccinations.error(); as err) {
+        <p class="inline-error" role="alert"><mat-icon>error</mat-icon> {{ err.message }}
+          <button mat-button (click)="vaccinations.load()">Try again</button></p>
+      } @else if (vaccinations.items().length === 0) {
+        <p class="empty">No vaccinations recorded yet.</p>
+      } @else {
+        <ul class="records" role="list">
+          @for (v of vaccinations.items(); track v.id) {
+            <li class="record">
+              <span class="record-icon"><mat-icon>vaccines</mat-icon></span>
+              <span class="record-main">
+                <span class="record-title">{{ v.vaccine }}</span>
+                <span class="record-meta">
+                  Given {{ v.administeredOn | date: 'mediumDate' }}
+                  @if (v.clinic) { · {{ v.clinic }} }
+                  @if (v.batchNumber) { · batch {{ v.batchNumber }} }
+                </span>
+                @if (v.notes) { <span class="record-notes">{{ v.notes }}</span> }
+              </span>
+              @if (due().get(v); as d) {
+                <span class="due" [class]="'due ' + d.kind">
+                  <mat-icon inline>{{ d.kind === 'overdue' ? 'warning' : d.kind === 'soon' ? 'schedule' : 'event' }}</mat-icon>
+                  {{ d.kind === 'overdue' ? 'Overdue since' : 'Due' }} {{ d.date | date: 'mediumDate' }}
+                </span>
+              }
+              <span class="actions">
+                <button mat-icon-button (click)="edit(VaccinationDialog, vaccinations, 'Vaccination', v)"
+                  [attr.aria-label]="'Edit ' + v.vaccine" matTooltip="Edit"><mat-icon>edit</mat-icon></button>
+                <button mat-icon-button (click)="deleteVaccination(v)" [attr.aria-label]="'Delete ' + v.vaccine"
+                  matTooltip="Delete"><mat-icon>delete</mat-icon></button>
+              </span>
+            </li>
+          }
+        </ul>
+      }
+    </mat-tab>
+
+    <!-- Vet visits -->
+    <mat-tab label="Vet visits">
+      <div class="tab-head">
+        <p>Past and planned visits, newest first.</p>
+        <button mat-flat-button (click)="edit(VetVisitDialog, vetVisits, 'Vet visit')"><mat-icon>add</mat-icon> Add</button>
+      </div>
+      @if (vetVisits.loading()) {
+        <mat-progress-bar mode="indeterminate" aria-label="Loading vet visits" />
+      } @else if (vetVisits.error(); as err) {
+        <p class="inline-error" role="alert"><mat-icon>error</mat-icon> {{ err.message }}
+          <button mat-button (click)="vetVisits.load()">Try again</button></p>
+      } @else if (vetVisits.items().length === 0) {
+        <p class="empty">No vet visits recorded yet.</p>
+      } @else {
+        <ul class="records" role="list">
+          @for (v of vetVisits.items(); track v.id) {
+            <li class="record">
+              <span class="record-icon"><mat-icon>stethoscope</mat-icon></span>
+              <span class="record-main">
+                <span class="record-title">{{ v.reason }}</span>
+                <span class="record-meta">
+                  {{ v.visitDate | date: 'medium' }}
+                  @if (v.clinic) { · {{ v.clinic }} }
+                  @if (v.vetName) { · {{ v.vetName }} }
+                  @if (typeof v.cost === 'number') { · {{ v.cost | number: '1.2-2' }} {{ v.currency }} }
+                </span>
+                @if (v.diagnosis) { <span class="record-notes"><strong>Diagnosis:</strong> {{ v.diagnosis }}</span> }
+                @if (v.treatment) { <span class="record-notes"><strong>Treatment:</strong> {{ v.treatment }}</span> }
+              </span>
+              @if (v.visitDate > now) {
+                <span class="due planned"><mat-icon inline>event</mat-icon> Planned</span>
+              }
+              <span class="actions">
+                <button mat-icon-button (click)="edit(VetVisitDialog, vetVisits, 'Vet visit', v)"
+                  aria-label="Edit vet visit" matTooltip="Edit"><mat-icon>edit</mat-icon></button>
+                <button mat-icon-button (click)="deleteVetVisit(v)" aria-label="Delete vet visit"
+                  matTooltip="Delete"><mat-icon>delete</mat-icon></button>
+              </span>
+            </li>
+          }
+        </ul>
+      }
+    </mat-tab>
+
+    <!-- Medications -->
+    <mat-tab label="Medications">
+      <div class="tab-head">
+        <mat-slide-toggle [checked]="activeOnly()" (change)="setActiveOnly($event.checked)">Active only</mat-slide-toggle>
+        <button mat-flat-button (click)="edit(MedicationDialog, medications, 'Medication')"><mat-icon>add</mat-icon> Add</button>
+      </div>
+      @if (medications.loading()) {
+        <mat-progress-bar mode="indeterminate" aria-label="Loading medications" />
+      } @else if (medications.error(); as err) {
+        <p class="inline-error" role="alert"><mat-icon>error</mat-icon> {{ err.message }}
+          <button mat-button (click)="medications.load()">Try again</button></p>
+      } @else if (medications.items().length === 0) {
+        <p class="empty">{{ activeOnly() ? 'No active medications.' : 'No medications recorded yet.' }}</p>
+      } @else {
+        <ul class="records" role="list">
+          @for (m of medications.items(); track m.id) {
+            <li class="record" [class.inactive]="!m.active">
+              <span class="record-icon"><mat-icon>medication</mat-icon></span>
+              <span class="record-main">
+                <span class="record-title">{{ m.name }} <span class="dosage">{{ m.dosage }}</span></span>
+                <span class="record-meta">
+                  {{ frequencyLabels[m.frequency] }}@if (m.timeOfDay) { at {{ m.timeOfDay }} }
+                  · {{ m.startDate | date: 'mediumDate' }} – {{ m.endDate ? (m.endDate | date: 'mediumDate') : 'ongoing' }}
+                </span>
+                @if (m.notes) { <span class="record-notes">{{ m.notes }}</span> }
+              </span>
+              <span class="due" [class.soon]="m.active">
+                <mat-icon inline>{{ m.active ? 'play_circle' : 'check_circle' }}</mat-icon>
+                {{ m.active ? 'Active' : 'Finished' }}
+              </span>
+              <span class="actions">
+                <button mat-icon-button (click)="edit(MedicationDialog, medications, 'Medication', m)"
+                  [attr.aria-label]="'Edit ' + m.name" matTooltip="Edit"><mat-icon>edit</mat-icon></button>
+                <button mat-icon-button (click)="deleteMedication(m)" [attr.aria-label]="'Delete ' + m.name"
+                  matTooltip="Delete"><mat-icon>delete</mat-icon></button>
+              </span>
+            </li>
+          }
+        </ul>
+      }
+    </mat-tab>
+
+    <!-- Weight -->
+    <mat-tab label="Weight">
+      <div class="tab-head">
+        <mat-button-toggle-group [value]="weightRange()" (change)="setRange($event.value)" aria-label="Time range"
+          hideSingleSelectionIndicator>
+          <mat-button-toggle value="3m">3 months</mat-button-toggle>
+          <mat-button-toggle value="1y">1 year</mat-button-toggle>
+          <mat-button-toggle value="all">All</mat-button-toggle>
+        </mat-button-toggle-group>
+        <button mat-flat-button (click)="edit(WeightDialog, weights, 'Weight')"><mat-icon>add</mat-icon> Add</button>
+      </div>
+      @if (weights.loading()) {
+        <mat-progress-bar mode="indeterminate" aria-label="Loading weights" />
+      } @else if (weights.error(); as err) {
+        <p class="inline-error" role="alert"><mat-icon>error</mat-icon> {{ err.message }}
+          <button mat-button (click)="weights.load()">Try again</button></p>
+      } @else if (weights.items().length === 0) {
+        <p class="empty">No weight measurements in this period.</p>
+      } @else {
+        <div class="weight-layout">
+          <div class="chart-card">
+            <h3>Weight (kg){{ petName() ? ' – ' + petName() : '' }}</h3>
+            <app-weight-chart [weights]="weights.items()" />
+          </div>
+          <table class="weight-table">
+            <caption class="visually-hidden">Weight measurements, newest first</caption>
+            <thead><tr><th scope="col">Date</th><th scope="col">kg</th></tr></thead>
+            <tbody>
+              @for (w of weightsNewestFirst(); track w.id ?? $index) {
+                <tr><td>{{ w.measuredOn | date: 'mediumDate' }}</td><td>{{ w.weightKg | number: '1.0-3' }}</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </mat-tab>
+  </mat-tab-group>
+</section>

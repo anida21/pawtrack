@@ -4,6 +4,7 @@
   <header class="page-header">
     <a mat-icon-button routerLink="/pets" aria-label="Back to pets"><mat-icon>arrow_back</mat-icon></a>
     <h1>{{ p.name }}</h1>
+    <a mat-button [routerLink]="['/reminders']" [queryParams]="{ petId: p.id }"><mat-icon>notifications</mat-icon> Reminders</a>
     @if (canEdit()) {
       <a mat-stroked-button [routerLink]="['/pets', p.id, 'edit']"><mat-icon>edit</mat-icon> Edit</a>
       <button mat-button class="danger" (click)="delete(p)"><mat-icon>delete</mat-icon> Delete</button>
@@ -49,11 +50,7 @@
       <p class="audit">Added {{ p.createdAt | date: 'mediumDate' }}@if (p.updatedAt) {<span> · updated {{ p.updatedAt | date: 'mediumDate' }}</span>}</p>
     </section>
 
-    <section class="state-card health" aria-label="Health records">
-      <mat-icon class="state-icon">vaccines</mat-icon>
-      <h2>Health records</h2>
-      <p>Vaccinations, vet visits, medications and weight tracking are coming soon.</p>
-    </section>
+    <app-health-section class="health" [petId]="p.id" [petName]="p.name" />
   </div>
 } @else {
   <div class="center-spinner"><mat-spinner diameter="48" aria-label="Loading pet" /></div>

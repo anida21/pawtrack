@@ -9,7 +9,7 @@ import openapiTS, { astToString } from 'openapi-typescript';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const contractsDir = resolve(root, process.env.CONTRACTS_DIR ?? '../pawtrack-development/contracts');
 const outDir = resolve(root, 'src/app/core/api/generated');
-const contracts = ['identity', 'pet'];
+const contracts = ['identity', 'pet', 'health', 'notification'];
 
 mkdirSync(outDir, { recursive: true });
 for (const name of contracts) {

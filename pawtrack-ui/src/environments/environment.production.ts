@@ -4,7 +4,8 @@ export const environment = {
   production: true,
   apiBaseUrl: 'http://localhost:8080',
   auth: {
-    authority: 'http://keycloak.pawtrack.local:8180/realms/pawtrack',
+    // Must match KEYCLOAK_ISSUER_URI in docker-compose (token `iss`).
+    authority: 'http://keycloak.localhost:8180/realms/pawtrack',
     clientId: 'pawtrack-ui',
   },
 };

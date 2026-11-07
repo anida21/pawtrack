@@ -43,6 +43,11 @@ export const routes: Routes = [
           import('./features/households/household-detail.page').then((m) => m.HouseholdDetailPage),
       },
       {
+        path: 'reminders',
+        title: 'Reminders · PawTrack',
+        loadComponent: () => import('./features/reminders/reminders.page').then((m) => m.RemindersPage),
+      },
+      {
         path: 'invite/:code',
         title: 'Invitation · PawTrack',
         loadComponent: () => import('./features/invite/accept-invite.page').then((m) => m.AcceptInvitePage),

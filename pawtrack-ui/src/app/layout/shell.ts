@@ -47,6 +47,7 @@ export class Shell {
 
   protected readonly nav: NavItem[] = [
     { link: '/pets', label: 'Pets', icon: 'pets' },
+    { link: '/reminders', label: 'Reminders', icon: 'notifications' },
     { link: '/households', label: 'Households', icon: 'home' },
     { link: '/profile', label: 'Profile', icon: 'person' },
   ];
