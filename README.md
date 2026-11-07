@@ -97,7 +97,7 @@ More detail: [docs/ARCHITECTURE.md](pawtrack-development/docs/ARCHITECTURE.md)
 
 ## Run it locally
 
-Requirements: Docker, plus JDK 17 + Maven and Node 20 if you want to run services outside Docker.
+Requirements: only Docker. (JDK 17 + Maven and Node 20 if you want to run or test services outside Docker.)
 
 ```bash
 git clone https://github.com/anida21/pawtrack.git
@@ -105,7 +105,7 @@ cd pawtrack/pawtrack-development
 docker compose --profile services up -d --build
 ```
 
-Then start the UI (`cd pawtrack-ui && npm install && npm start`) and open http://localhost:4200.
+This builds and starts everything, the UI included. After a few minutes open http://localhost:4200.
 
 | | URL | Login (local test data) |
 |---|---|---|

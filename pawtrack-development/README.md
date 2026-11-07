@@ -38,10 +38,13 @@ Architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · Contracts: [contra
    ```
    docker compose up -d
    ```
-3. Or start everything, building the services from the sibling folders:
+3. Or start everything, building the services and the UI from the sibling folders, then open
+   http://localhost:4200:
    ```
    docker compose --profile services up -d --build
    ```
+   (If you develop the UI with `npm start`, which also uses port 4200, start the backend only:
+   `docker compose --profile services up -d --build identity pet health notification gateway`.)
 4. Stop: `docker compose --profile services down` (add `-v` to wipe databases).
 
 | What | URL | Login (local only) |

@@ -34,8 +34,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Start the platform (build all services)
-        run: docker compose --profile services up -d --build
+      - name: Start the platform (build all backend services; the UI is not needed for API tests)
+        run: docker compose --profile services up -d --build identity pet health notification gateway
 
       - name: Wait until gateway, services and Keycloak are ready
         run: |

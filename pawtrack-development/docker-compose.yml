@@ -136,6 +136,19 @@ services:
     ports: ["8080:8080"]
     depends_on: [identity, pet, health, notification]
 
+  # Angular app (production build served by nginx). Open http://localhost:4200.
+  # The browser calls the gateway and Keycloak itself, so it needs no container links.
+  # Stop `npm start` first if it is running, or set UI_HOST_PORT (then also add that origin to the
+  # pawtrack-ui client in Keycloak and to the gateway's CORS_ALLOWED_ORIGINS).
+  ui:
+    profiles: [services]
+    build:
+      context: ../pawtrack-ui
+      additional_contexts:
+        contracts: ./contracts
+    ports: ["${UI_HOST_PORT:-4200}:4200"]
+    depends_on: [gateway]
+
 volumes:
   pgdata:
   miniodata:
