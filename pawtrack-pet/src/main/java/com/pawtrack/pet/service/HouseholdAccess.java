@@ -31,18 +31,32 @@ public class HouseholdAccess {
     }
 
     public void requireRead(Jwt jwt, UUID householdId) {
-        if (!roles(jwt).containsKey(householdId)) {
+        if (role(jwt, householdId) == null) {
             throw new ForbiddenException("You are not a member of this household");
         }
     }
 
     public void requireWrite(Jwt jwt, UUID householdId) {
-        HouseholdRole role = roles(jwt).get(householdId);
+        HouseholdRole role = role(jwt, householdId);
         if (role == null) {
             throw new ForbiddenException("You are not a member of this household");
         }
         if (!role.canWrite()) {
             throw new ForbiddenException("Sitters can view pets but not change them");
         }
+    }
+
+    /**
+     * Role of the caller in {@code householdId}, or {@code null}. A household missing from the cached memberships
+     * may simply be newer than the cache (just created or joined), so identity is asked once more before denying.
+     * Removals need no such check: household.member.removed evicts the cache.
+     */
+    public HouseholdRole role(Jwt jwt, UUID householdId) {
+        HouseholdRole role = roles(jwt).get(householdId);
+        if (role == null) {
+            identityClient.evict(jwt.getSubject());
+            role = roles(jwt).get(householdId);
+        }
+        return role;
     }
 }

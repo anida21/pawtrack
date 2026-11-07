@@ -12,6 +12,9 @@ Pets of a household and their profile photos. Layout copied from `../pawtrack-id
 - Access: `service.HouseholdAccess` (`requireRead` / `requireWrite`) asks identity `GET /api/v1/me/households`
   through `config.IdentityClient`, forwarding the caller's token. `RestIdentityClient` caches per user for 60 s
   (`pawtrack.identity.membership-cache-ttl`). SITTER = read only.
+  Cache freshness: a household missing from the cache is looked up once more before 403 (new / just joined);
+  `household.member.removed` evicts the user's entry in **every** instance (`MembershipCacheListener` on an
+  exclusive per-instance queue), so a removed member loses access at once.
 - Errors: throw `NotFoundException / ForbiddenException / PhotoTooLargeException / UnsupportedPhotoTypeException /
   DependencyUnavailableException` → ProblemDetail via `GlobalExceptionHandler`.
 - Events: publish envelope `{eventId,type,occurredAt,producer:"pawtrack-pet",data}` to exchange `pawtrack.events`,

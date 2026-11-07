@@ -1,10 +1,8 @@
 package com.pawtrack.pet.service;
 
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import com.pawtrack.pet.dto.HouseholdRole;
 import com.pawtrack.pet.dto.PetPage;
 import com.pawtrack.pet.dto.PetRequest;
 import com.pawtrack.pet.dto.PetResponse;
@@ -45,9 +43,8 @@ public class PetService {
      */
     @Transactional(readOnly = true)
     public PetPage list(Jwt jwt, UUID householdId, Species species, int page, int size) {
-        Map<UUID, HouseholdRole> roles = access.roles(jwt);
-        Set<UUID> households = householdId == null ? roles.keySet()
-            : roles.containsKey(householdId) ? Set.of(householdId) : Set.of();
+        Set<UUID> households = householdId == null ? access.roles(jwt).keySet()
+            : access.role(jwt, householdId) != null ? Set.of(householdId) : Set.of();
         PageRequest pageable = PageRequest.of(page, size, LIST_ORDER);
         if (households.isEmpty()) {
             return PetPage.of(Page.<PetResponse>empty(pageable));

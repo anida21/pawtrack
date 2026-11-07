@@ -21,7 +21,8 @@ import org.springframework.web.client.RestClientException;
 /**
  * Calls identity {@code GET /api/v1/me/households} with the caller's own token and keeps the answer
  * for {@code pawtrack.identity.membership-cache-ttl} (60 s, ARCHITECTURE.md), keyed by the token's subject.
- * A membership change in identity therefore reaches this service within one TTL.
+ * A removed member's entry is evicted on {@code household.member.removed} ({@code MembershipCacheListener});
+ * any other membership change reaches this service within one TTL.
  */
 @Slf4j
 @Component
@@ -62,6 +63,12 @@ public class RestIdentityClient implements IdentityClient {
         cache.put(jwt.getSubject(),
             new CachedMemberships(memberships, now.plus(properties.identity().membershipCacheTtl())));
         return memberships;
+    }
+
+    /** Called on {@code household.member.removed}, so a removed member loses access at once instead of after the TTL. */
+    @Override
+    public void evict(String userId) {
+        cache.remove(userId);
     }
 
     private List<HouseholdMembership> fetch(Jwt jwt) {

@@ -34,6 +34,11 @@ public class FakeIdentity implements IdentityClient {
         this.down = down;
     }
 
+    /** Nothing cached here. */
+    @Override
+    public void evict(String userId) {
+    }
+
     @Override
     public List<HouseholdMembership> myHouseholds(Jwt jwt) {
         if (down) {

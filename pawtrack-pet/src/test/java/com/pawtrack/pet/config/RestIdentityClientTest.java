@@ -77,6 +77,20 @@ class RestIdentityClientTest {
     }
 
     @Test
+    void evictForcesAFreshLookupForThatUserOnly() {
+        identity.expect(ExpectedCount.times(3), requestTo(URL))
+            .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
+
+        client.myHouseholds(jwt("t1", "alice"));
+        client.myHouseholds(jwt("t2", "bob"));
+        client.evict("alice");
+        client.myHouseholds(jwt("t3", "alice"));   // evicted → second request for alice
+        client.myHouseholds(jwt("t4", "bob"));     // still cached
+
+        identity.verify();
+    }
+
+    @Test
     void cachesPerUser() {
         identity.expect(ExpectedCount.twice(), requestTo(URL))
             .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));

@@ -12,4 +12,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 public interface IdentityClient {
 
     List<HouseholdMembership> myHouseholds(Jwt jwt);
+
+    /** Forgets anything cached for {@code userId} (JWT subject), so the next check asks identity again. */
+    void evict(String userId);
 }
