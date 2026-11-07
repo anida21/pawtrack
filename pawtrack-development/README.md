@@ -66,5 +66,23 @@ curl -s -X POST http://keycloak.localhost:8180/realms/pawtrack/protocol/openid-c
 
 ## E2E tests
 
-`e2e/` – Jest + TypeScript. API clients are generated from `contracts/*.yaml`.
-See `e2e/README.md` (coming soon).
+`e2e/` – Jest + TypeScript API tests that run through the gateway against the running stack, as the seeded
+users alice and bob. Request/response types are generated from `contracts/*.yaml` before every run, so a
+contract change that breaks a flow fails at compile time.
+
+```bash
+docker compose --profile services up -d --build
+cd e2e
+npm install
+npm test          # writes junit.xml
+```
+
+| Suite | Covers |
+|---|---|
+| `tests/identity` | profile provisioning, 401, households, invitations (wrong user 403, reuse 410), last owner 409 |
+| `tests/pet` | CRUD, filters, 400 problems, access by household and role, removed member loses access at once, `household.deleted` → pets deleted |
+| `tests/health` | vaccinations, weights, medications, summary, validation, access checked through pet |
+| `tests/notification` | vaccination → reminders via RabbitMQ (and their cancellation), shared reminders, done/cancel 409, reminder email in Mailpit |
+
+Override the URLs with `GATEWAY_URL`, `KEYCLOAK_URL` and `MAILPIT_URL`. Every test creates its own
+households and deletes them afterwards.

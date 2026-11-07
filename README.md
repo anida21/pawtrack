@@ -75,7 +75,9 @@ More detail: [docs/ARCHITECTURE.md](pawtrack-development/docs/ARCHITECTURE.md)
 - **Security with OAuth2 / OpenID Connect.** Keycloak issues the tokens, the UI signs in with code flow +
   PKCE, every service is a stateless resource server, and authorization is per household and role.
 - **Real integration tests.** JUnit 5 + **Testcontainers** (PostgreSQL, RabbitMQ, MinIO, Mailpit),
-  330+ backend tests, plus Vitest unit tests in the UI.
+  340+ backend tests, Vitest unit tests in the UI, and an **end-to-end suite** (Jest + TypeScript) that drives
+  the whole stack through the gateway: login, households, pets, health records and reminders arriving via
+  RabbitMQ all the way to an email in Mailpit ([pawtrack-development/e2e](pawtrack-development#e2e-tests)).
 - **Production-style build.** Liquibase migrations, MapStruct, RFC 7807 problem responses, actuator
   health probes, multi-stage Docker images that run as a non-root user.
 - **CI/CD per service.** Each service has its own GitHub Actions workflow, triggered only by changes in its
@@ -131,7 +133,8 @@ pawtrack/
 
 - [x] Backfill for consumers that start after events were published (`replay.requested` snapshots)
 - [ ] Transactional outbox, so an event is never lost when RabbitMQ is down at commit time
-- [ ] Evict the pet service's membership cache on `household.member.removed`
-- [ ] End-to-end API tests (Jest + TypeScript, clients generated from the contracts)
+- [x] Evict the pet service's membership cache on `household.member.removed`
+- [x] End-to-end API tests (Jest + TypeScript, types generated from the contracts)
+- [ ] Run the E2E suite in CI against the full docker-compose stack
 - [ ] Observability: Prometheus + Grafana, distributed tracing
 - [ ] Cloud deployment
