@@ -10,6 +10,7 @@ email reminders before a vaccination or medication is due.
 [![notification](https://github.com/anida21/pawtrack/actions/workflows/notification.yml/badge.svg)](https://github.com/anida21/pawtrack/actions/workflows/notification.yml)
 [![gateway](https://github.com/anida21/pawtrack/actions/workflows/gateway.yml/badge.svg)](https://github.com/anida21/pawtrack/actions/workflows/gateway.yml)
 [![ui](https://github.com/anida21/pawtrack/actions/workflows/ui.yml/badge.svg)](https://github.com/anida21/pawtrack/actions/workflows/ui.yml)
+[![e2e](https://github.com/anida21/pawtrack/actions/workflows/e2e.yml/badge.svg)](https://github.com/anida21/pawtrack/actions/workflows/e2e.yml)
 
 ![Java 17](https://img.shields.io/badge/Java-17-007396?logo=openjdk&logoColor=white)
 ![Spring Boot 4](https://img.shields.io/badge/Spring%20Boot-4.1-6DB33F?logo=springboot&logoColor=white)
@@ -81,7 +82,8 @@ More detail: [docs/ARCHITECTURE.md](pawtrack-development/docs/ARCHITECTURE.md)
 - **Production-style build.** Liquibase migrations, MapStruct, RFC 7807 problem responses, actuator
   health probes, multi-stage Docker images that run as a non-root user.
 - **CI/CD per service.** Each service has its own GitHub Actions workflow, triggered only by changes in its
-  folder, which builds and tests the service and pushes a Docker image to GHCR.
+  folder, which builds and tests the service and pushes a Docker image to GHCR. A separate `e2e` workflow
+  builds everything, starts the platform with docker compose and runs the end-to-end suite.
 
 ## Screenshots
 
@@ -135,6 +137,6 @@ pawtrack/
 - [ ] Transactional outbox, so an event is never lost when RabbitMQ is down at commit time
 - [x] Evict the pet service's membership cache on `household.member.removed`
 - [x] End-to-end API tests (Jest + TypeScript, types generated from the contracts)
-- [ ] Run the E2E suite in CI against the full docker-compose stack
+- [x] Run the E2E suite in CI against the full docker-compose stack
 - [ ] Observability: Prometheus + Grafana, distributed tracing
 - [ ] Cloud deployment

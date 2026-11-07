@@ -1,0 +1,83 @@
+name: e2e
+
+# Builds every service, starts the whole platform with docker compose and runs the end-to-end suite
+# (pawtrack-development/e2e) through the gateway. Runs on any change that can affect behaviour across services.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'pawtrack-*/**'
+      - '!pawtrack-ui/**'
+      - '.github/workflows/e2e.yml'
+  pull_request:
+    paths:
+      - 'pawtrack-*/**'
+      - '!pawtrack-ui/**'
+      - '.github/workflows/e2e.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: pawtrack-development
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start the platform (build all services)
+        run: docker compose --profile services up -d --build
+
+      - name: Wait until gateway, services and Keycloak are ready
+        run: |
+          wait_for() {
+            local name=$1 url=$2
+            for i in $(seq 1 90); do
+              if curl -fsS "$url" > /dev/null 2>&1; then echo "$name is up"; return 0; fi
+              sleep 2
+            done
+            echo "::error::$name did not become ready ($url)"; return 1
+          }
+          wait_for keycloak     http://localhost:8180/realms/pawtrack/.well-known/openid-configuration
+          wait_for identity     http://localhost:8081/actuator/health/readiness
+          wait_for pet          http://localhost:8082/actuator/health/readiness
+          wait_for health       http://localhost:8083/actuator/health/readiness
+          wait_for notification http://localhost:8084/actuator/health/readiness
+          wait_for gateway      http://localhost:8080/actuator/health
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: pawtrack-development/e2e/package-lock.json
+
+      - name: Run end-to-end tests
+        working-directory: pawtrack-development/e2e
+        run: |
+          npm ci
+          npm test
+
+      - name: Upload JUnit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-junit
+          path: pawtrack-development/e2e/junit.xml
+          if-no-files-found: ignore
+
+      - name: Service logs on failure
+        if: failure()
+        run: docker compose --profile services logs --no-color --tail=200
+
+      - name: Stop the platform
+        if: always()
+        run: docker compose --profile services down -v
