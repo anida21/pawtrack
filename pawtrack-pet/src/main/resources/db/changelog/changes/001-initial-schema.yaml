@@ -1,0 +1,44 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-pets
+      author: pawtrack
+      changes:
+        - createTable:
+            tableName: pets
+            columns:
+              - column: { name: id, type: uuid, constraints: { primaryKey: true } }
+              # Owned by identity; no FK across services.
+              - column: { name: household_id, type: uuid, constraints: { nullable: false } }
+              - column: { name: name, type: varchar(60), constraints: { nullable: false } }
+              - column: { name: species, type: varchar(20), constraints: { nullable: false } }   # DOG | CAT | ... (pet.yaml Species)
+              - column: { name: breed, type: varchar(80) }
+              - column: { name: sex, type: varchar(10) }                                          # MALE | FEMALE | UNKNOWN
+              - column: { name: birth_date, type: date }
+              - column: { name: neutered, type: boolean }
+              - column: { name: microchip_number, type: varchar(15) }
+              - column: { name: color, type: varchar(60) }
+              - column: { name: notes, type: varchar(2000) }
+              - column: { name: photo_key, type: varchar(200) }                                    # object key in bucket pet-photos
+              - column: { name: photo_content_type, type: varchar(40) }
+              - column: { name: created_by, type: uuid, constraints: { nullable: false } }        # JWT sub
+              - column: { name: created_at, type: timestamptz, constraints: { nullable: false } }
+              - column: { name: updated_at, type: timestamptz }
+              - column: { name: deleted_at, type: timestamptz }                                    # soft delete
+        - createIndex:
+            tableName: pets
+            indexName: ix_pets_household_active
+            columns:
+              - column: { name: household_id }
+              - column: { name: deleted_at }
+
+  - changeSet:
+      id: 001-processed-events
+      author: pawtrack
+      comment: eventIds of consumed RabbitMQ events, so redelivered messages are skipped (events.md idempotency).
+      changes:
+        - createTable:
+            tableName: processed_events
+            columns:
+              - column: { name: event_id, type: uuid, constraints: { primaryKey: true } }
+              - column: { name: type, type: varchar(100), constraints: { nullable: false } }
+              - column: { name: processed_at, type: timestamptz, constraints: { nullable: false } }

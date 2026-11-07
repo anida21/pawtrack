@@ -1,0 +1,60 @@
+name: pet
+
+# Copied from identity.yml (the template for every service workflow).
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'pawtrack-pet/**'
+      - '.github/workflows/pet.yml'
+  pull_request:
+    paths:
+      - 'pawtrack-pet/**'
+      - '.github/workflows/pet.yml'
+
+permissions:
+  contents: read
+  packages: write
+
+defaults:
+  run:
+    working-directory: pawtrack-pet
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+          cache-dependency-path: pawtrack-pet/pom.xml
+      - name: Build and test (Testcontainers)
+        run: mvn -B verify
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pet-surefire-reports
+          path: pawtrack-pet/target/surefire-reports
+
+  docker:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: pawtrack-pet
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/pawtrack-pet:latest
+            ghcr.io/${{ github.repository_owner }}/pawtrack-pet:${{ github.sha }}

@@ -1,10 +1,12 @@
 openapi: 3.0.3
 info:
   title: PawTrack Pet API
-  version: 1.0.0
+  version: 1.1.0
   description: |
     Pets belong to a household. Access rule: the caller must be a member of the pet's
     household (checked via identity `GET /api/v1/me/households`). SITTER may read, not write/delete.
+    Unknown and soft-deleted pets are 404; a pet in a household the caller is not a member of is 403.
+    If identity cannot be reached, requests that need the membership check return 503.
 servers:
   - url: http://pet.pawtrack.local:8082
 security:
@@ -13,14 +15,16 @@ paths:
   /api/v1/pets:
     get:
       summary: Pets in all households of the caller, optionally filtered.
+      description: Sorted by name. A `householdId` the caller is not a member of matches no pets (empty page).
       operationId: listPets
       parameters:
         - { name: householdId, in: query, schema: { type: string, format: uuid } }
         - { name: species, in: query, schema: { $ref: '#/components/schemas/Species' } }
         - { name: page, in: query, schema: { type: integer, default: 0, minimum: 0 } }
-        - { name: size, in: query, schema: { type: integer, default: 20, maximum: 100 } }
+        - { name: size, in: query, schema: { type: integer, default: 20, minimum: 1, maximum: 100 } }
       responses:
         '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PetPage' } } } }
+        '400': { $ref: '#/components/responses/Problem' }
     post:
       summary: Publishes pet.created.
       operationId: createPet
@@ -41,12 +45,15 @@ paths:
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
     put:
+      summary: Full replace of the editable fields (omitted optional fields are cleared).
+      description: Changing `householdId` moves the pet and needs OWNER/MEMBER in both households.
       operationId: updatePet
       requestBody:
         required: true
         content: { application/json: { schema: { $ref: '#/components/schemas/PetRequest' } } }
       responses:
         '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Pet' } } } }
+        '400': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
     delete:
@@ -55,10 +62,14 @@ paths:
       responses:
         '204': { description: Deleted }
         '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
   /api/v1/pets/{petId}/photo:
     parameters: [ { $ref: '#/components/parameters/PetId' } ]
     put:
       summary: Upload/replace profile photo (jpeg/png/webp, max 5 MB). Stored in MinIO bucket pet-photos.
+      description: |
+        The format is detected from the file content, not from the part's Content-Type.
+        OWNER/MEMBER only (403 for SITTER). 400 if the `file` part is missing.
       operationId: uploadPhoto
       requestBody:
         required: true
@@ -71,13 +82,18 @@ paths:
                 file: { type: string, format: binary }
       responses:
         '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Pet' } } } }
+        '400': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
         '413': { $ref: '#/components/responses/Problem' }
         '415': { $ref: '#/components/responses/Problem' }
     get:
       summary: Redirect (302) to a pre-signed MinIO URL valid 10 minutes.
+      description: 404 if the pet does not exist or has no photo.
       operationId: getPhoto
       responses:
         '302': { description: Redirect to image }
+        '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
 components:
   securitySchemes:

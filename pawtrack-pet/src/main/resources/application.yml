@@ -1,0 +1,75 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: pawtrack-pet
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:pet_db}
+    username: ${DB_USER:pet}
+    password: ${DB_PASSWORD:pet}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: 5672
+    username: ${RABBITMQ_USER:pawtrack}
+    password: ${RABBITMQ_PASSWORD:pawtrack}
+    listener:
+      simple:
+        # A message that still fails after the retries is rejected and goes to its .dlq (events.md).
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 500ms
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://keycloak.pawtrack.local:8180/realms/pawtrack}
+  servlet:
+    multipart:
+      # The 5 MB photo limit is enforced by PhotoService; the container limit is a little higher
+      # so oversized uploads still get a 413 ProblemDetail rather than a connection reset.
+      max-file-size: 6MB
+      max-request-size: 7MB
+
+pawtrack:
+  events:
+    exchange: pawtrack.events
+    dead-letter-exchange: pawtrack.events.dlx
+    household-queue: pet.household-events
+  identity:
+    url: ${IDENTITY_URL:http://localhost:8081}
+    membership-cache-ttl: 60s
+    connect-timeout: 2s
+    read-timeout: 5s
+  photos:
+    endpoint: ${MINIO_URL:http://localhost:9000}
+    # Host used in the pre-signed URLs handed to browsers (the Docker-internal name is not reachable).
+    public-endpoint: ${MINIO_PUBLIC_URL:http://localhost:9000}
+    # Local development values only (same as docker-compose); override in real environments.
+    access-key: ${MINIO_ACCESS_KEY:pawtrack}
+    secret-key: ${MINIO_SECRET_KEY:pawtrack123}
+    bucket: pet-photos
+    max-size: 5MB
+    url-validity: 10m
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
