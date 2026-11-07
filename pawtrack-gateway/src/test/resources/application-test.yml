@@ -1,0 +1,7 @@
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Never contacted in tests: support.TestJwtDecoderConfig replaces the Keycloak-backed decoder.
+          issuer-uri: http://localhost:0/realms/pawtrack
