@@ -59,8 +59,11 @@ services:
       interval: 10s
       retries: 10
 
+  # MinIO no longer publishes images (minio/minio, minio/mc, quay.io/minio). Chainguard's free builds only
+  # offer `latest`, so they are pinned by digest; bump the digest deliberately.
   minio:
-    image: minio/minio:latest
+    image: cgr.dev/chainguard/minio@sha256:869ca3178831d9f521ea02258a0f0d4fbc1e9f84302e707514e1f861b860865d
+    user: "0"   # the image's non-root user cannot write the named volume (local dev only)
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: pawtrack
@@ -68,12 +71,15 @@ services:
     ports: ["9000:9000", "9001:9001"]
     volumes: [miniodata:/data]
 
+  # Creates the bucket for local use (pet also creates it on startup). The image has no shell,
+  # so the alias comes from MC_HOST_local and failures are retried by the restart policy.
   minio-init:
-    image: minio/mc:latest
+    image: cgr.dev/chainguard/minio-client@sha256:7e80e77f8c949810d0eaead1120e28c63f913ff96ae7f78a8e4cd3c1e2f0623f
     depends_on: [minio]
-    entrypoint: >
-      /bin/sh -c "until mc alias set local http://minio:9000 pawtrack pawtrack123; do sleep 2; done;
-      mc mb --ignore-existing local/pet-photos; exit 0"
+    restart: on-failure
+    environment:
+      MC_HOST_local: http://pawtrack:pawtrack123@minio:9000
+    command: ["mb", "--ignore-existing", "local/pet-photos"]
 
   mailpit:
     image: axllent/mailpit:latest

@@ -41,12 +41,14 @@ public class TestcontainersConfiguration {
 
     /**
      * {@code minio/minio} is no longer published on Docker Hub, so Chainguard's MinIO build is used
-     * (it only offers {@code latest} for free). It runs as a non-root user that cannot write the
-     * container's data directory, hence root inside this throw-away container.
+     * (it only offers {@code latest} for free, so it is pinned by digest, the same one as docker-compose).
+     * It runs as a non-root user that cannot write the container's data directory, hence root inside
+     * this throw-away container.
      */
     @Bean
     MinIOContainer minio() {
-        DockerImageName image = DockerImageName.parse("cgr.dev/chainguard/minio:latest")
+        DockerImageName image = DockerImageName.parse(
+                "cgr.dev/chainguard/minio@sha256:869ca3178831d9f521ea02258a0f0d4fbc1e9f84302e707514e1f861b860865d")
             .asCompatibleSubstituteFor("minio/minio");
         return new MinIOContainer(image).withCreateContainerCmdModifier(cmd -> cmd.withUser("0"));
     }

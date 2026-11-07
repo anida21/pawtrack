@@ -45,7 +45,8 @@ Pets of a household and their profile photos. Layout copied from `../pawtrack-id
   Identity is replaced by `support.FakeIdentity` (`identity.grant(user, householdId, role)`), uncached;
   `RestIdentityClientTest` covers the real HTTP client with `MockRestServiceServer`.
   RabbitMQ 4 rejects transient non-exclusive queues: declare test queues durable.
-- MinIO Testcontainer uses `cgr.dev/chainguard/minio:latest` (run as root) because `minio/minio` is no longer on Docker Hub.
+- MinIO Testcontainer uses `cgr.dev/chainguard/minio` pinned by digest (run as root) because MinIO no longer publishes
+  images. Keep the digest identical to `../pawtrack-development/docker-compose.yml` and bump both together.
 
 ## Behaviour beyond the contract text
 - `pet.deleted` is also published for each pet soft-deleted by `household.deleted` (documented in events.md).
