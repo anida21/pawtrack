@@ -23,11 +23,11 @@
 
 | type | producer | data | consumers |
 |---|---|---|---|
-| `household.member.added` | identity | `householdId, userId, role` | notification |
+| `household.member.added` | identity | `householdId, userId, role` | notification. Sent on invitation accept, and also for the OWNER when a household is created (incl. the default "My pets" at provisioning) |
 | `household.member.removed` | identity | `householdId, userId` | notification |
 | `household.deleted` | identity | `householdId` | pet (soft-delete pets), notification |
 | `household.invitation.created` | identity | `householdId, householdName, email, code, invitedBy, expiresAt` | notification (sends invite email) |
-| `user.updated` | identity | `userId, email, displayName, timezone, emailNotifications` | notification (keeps recipient copy) |
+| `user.updated` | identity | `userId, email, displayName, timezone, emailNotifications` | notification (keeps recipient copy). Sent on `PATCH /me` and once when the user is first provisioned, so treat it as an upsert |
 | `pet.created` | pet | `petId, householdId, name, species` | notification, health |
 | `pet.deleted` | pet | `petId, householdId` | health (soft-delete records), notification (cancel reminders) |
 | `health.vaccination.recorded` | health | `vaccinationId, petId, householdId, vaccine, administeredOn, nextDueDate?` | notification: if `nextDueDate`, reminders 7 days before and on the day, 09:00 user tz |

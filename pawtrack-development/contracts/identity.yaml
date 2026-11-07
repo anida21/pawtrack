@@ -1,10 +1,12 @@
 openapi: 3.0.3
 info:
   title: PawTrack Identity API
-  version: 1.0.0
+  version: 1.1.0
   description: |
     Users (mirrored from Keycloak on first call), households and memberships.
     The user id is always the JWT `sub` claim.
+    Every endpoint returns 401 without a valid bearer token. Any authenticated call provisions the
+    user on first use (see getMe); a token without an `email` claim then gets 403.
 servers:
   - url: http://identity.pawtrack.local:8081
 security:
@@ -22,6 +24,7 @@ paths:
       responses:
         '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/User' } } } }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
     patch:
       tags: [Me]
       operationId: updateMe
@@ -70,7 +73,9 @@ paths:
         content: { application/json: { schema: { $ref: '#/components/schemas/HouseholdRequest' } } }
       responses:
         '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Household' } } } }
+        '400': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
     delete:
       tags: [Households]
       summary: OWNER only. Publishes household.deleted.
@@ -78,17 +83,21 @@ paths:
       responses:
         '204': { description: Deleted }
         '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
   /api/v1/households/{householdId}/members/{userId}:
     parameters:
       - { $ref: '#/components/parameters/HouseholdId' }
       - { name: userId, in: path, required: true, schema: { type: string, format: uuid } }
     delete:
       tags: [Households]
-      summary: OWNER removes a member, or a member removes themself. The last OWNER cannot leave.
+      summary: |
+        OWNER removes a member, or a member removes themself. The last OWNER cannot leave (409).
+        404 if the household does not exist or the user is not a member. Publishes household.member.removed.
       operationId: removeMember
       responses:
         '204': { description: Removed }
         '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
   /api/v1/households/{householdId}/invitations:
     parameters: [ { $ref: '#/components/parameters/HouseholdId' } ]
@@ -101,15 +110,22 @@ paths:
         content: { application/json: { schema: { $ref: '#/components/schemas/InvitationRequest' } } }
       responses:
         '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Invitation' } } } }
+        '400': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
   /api/v1/invitations/{code}/accept:
     post:
       tags: [Invitations]
-      summary: Current user joins the household. Publishes household.member.added.
+      summary: |
+        Current user joins the household with the invited role. Publishes household.member.added.
+        The invitation email must match the user's email (case-insensitive), otherwise 403.
+        Codes are single-use: an expired or already used code gives 410. If the user is already
+        a member, the code is consumed and the household is returned unchanged.
       operationId: acceptInvitation
       parameters: [ { name: code, in: path, required: true, schema: { type: string } } ]
       responses:
         '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Household' } } } }
+        '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '410': { $ref: '#/components/responses/Problem' }
 components:
