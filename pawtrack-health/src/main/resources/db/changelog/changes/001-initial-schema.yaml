@@ -1,0 +1,130 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-pets
+      author: pawtrack
+      comment: Local copy of pet's pets (petId → householdId, name), kept from pet.created / pet.deleted (events.md).
+      changes:
+        - createTable:
+            tableName: pets
+            columns:
+              - column: { name: pet_id, type: uuid, constraints: { primaryKey: true } }
+              # Owned by identity; no FK across services.
+              - column: { name: household_id, type: uuid, constraints: { nullable: false } }
+              # null when pet.deleted arrived before (or without) pet.created
+              - column: { name: name, type: varchar(60) }
+              - column: { name: updated_at, type: timestamptz, constraints: { nullable: false } }
+              - column: { name: deleted_at, type: timestamptz }
+
+  - changeSet:
+      id: 001-vaccinations
+      author: pawtrack
+      changes:
+        - createTable:
+            tableName: vaccinations
+            columns:
+              - column: { name: id, type: uuid, constraints: { primaryKey: true } }
+              - column: { name: pet_id, type: uuid, constraints: { nullable: false } }
+              - column: { name: vaccine, type: varchar(100), constraints: { nullable: false } }
+              - column: { name: administered_on, type: date, constraints: { nullable: false } }
+              - column: { name: next_due_date, type: date }
+              - column: { name: batch_number, type: varchar(50) }
+              - column: { name: clinic, type: varchar(120) }
+              - column: { name: notes, type: varchar(2000) }
+              - column: { name: created_by, type: uuid, constraints: { nullable: false } }       # JWT sub
+              - column: { name: created_at, type: timestamptz, constraints: { nullable: false } }
+              - column: { name: updated_at, type: timestamptz }
+              - column: { name: deleted_at, type: timestamptz }                                   # soft delete
+        - createIndex:
+            tableName: vaccinations
+            indexName: ix_vaccinations_pet_active
+            columns:
+              - column: { name: pet_id }
+              - column: { name: deleted_at }
+
+  - changeSet:
+      id: 001-vet-visits
+      author: pawtrack
+      changes:
+        - createTable:
+            tableName: vet_visits
+            columns:
+              - column: { name: id, type: uuid, constraints: { primaryKey: true } }
+              - column: { name: pet_id, type: uuid, constraints: { nullable: false } }
+              - column: { name: visit_date, type: timestamptz, constraints: { nullable: false } }
+              - column: { name: clinic, type: varchar(120) }
+              - column: { name: vet_name, type: varchar(100) }
+              - column: { name: reason, type: varchar(200), constraints: { nullable: false } }
+              - column: { name: diagnosis, type: varchar(2000) }
+              - column: { name: treatment, type: varchar(2000) }
+              - column: { name: cost, type: 'numeric(12,2)' }
+              - column: { name: currency, type: varchar(3), constraints: { nullable: false } }     # ISO 4217, default BAM
+              - column: { name: created_by, type: uuid, constraints: { nullable: false } }
+              - column: { name: created_at, type: timestamptz, constraints: { nullable: false } }
+              - column: { name: updated_at, type: timestamptz }
+              - column: { name: deleted_at, type: timestamptz }
+        - createIndex:
+            tableName: vet_visits
+            indexName: ix_vet_visits_pet_active
+            columns:
+              - column: { name: pet_id }
+              - column: { name: deleted_at }
+
+  - changeSet:
+      id: 001-medications
+      author: pawtrack
+      changes:
+        - createTable:
+            tableName: medications
+            columns:
+              - column: { name: id, type: uuid, constraints: { primaryKey: true } }
+              - column: { name: pet_id, type: uuid, constraints: { nullable: false } }
+              - column: { name: name, type: varchar(100), constraints: { nullable: false } }
+              - column: { name: dosage, type: varchar(60), constraints: { nullable: false } }
+              - column: { name: start_date, type: date, constraints: { nullable: false } }
+              - column: { name: end_date, type: date }
+              - column: { name: frequency, type: varchar(20), constraints: { nullable: false } }  # ONCE | DAILY | ...
+              - column: { name: time_of_day, type: varchar(5) }                                   # HH:mm
+              - column: { name: notes, type: varchar(2000) }
+              - column: { name: created_by, type: uuid, constraints: { nullable: false } }
+              - column: { name: created_at, type: timestamptz, constraints: { nullable: false } }
+              - column: { name: updated_at, type: timestamptz }
+              - column: { name: deleted_at, type: timestamptz }
+        - createIndex:
+            tableName: medications
+            indexName: ix_medications_pet_active
+            columns:
+              - column: { name: pet_id }
+              - column: { name: deleted_at }
+
+  - changeSet:
+      id: 001-weights
+      author: pawtrack
+      changes:
+        - createTable:
+            tableName: weights
+            columns:
+              - column: { name: id, type: uuid, constraints: { primaryKey: true } }
+              - column: { name: pet_id, type: uuid, constraints: { nullable: false } }
+              - column: { name: measured_on, type: date, constraints: { nullable: false } }
+              - column: { name: weight_kg, type: 'numeric(6,3)', constraints: { nullable: false } }
+              - column: { name: created_by, type: uuid, constraints: { nullable: false } }
+              - column: { name: created_at, type: timestamptz, constraints: { nullable: false } }
+              - column: { name: deleted_at, type: timestamptz }
+        - createIndex:
+            tableName: weights
+            indexName: ix_weights_pet_measured
+            columns:
+              - column: { name: pet_id }
+              - column: { name: measured_on }
+
+  - changeSet:
+      id: 001-processed-events
+      author: pawtrack
+      comment: eventIds of consumed RabbitMQ events, so redelivered messages are skipped (events.md idempotency).
+      changes:
+        - createTable:
+            tableName: processed_events
+            columns:
+              - column: { name: event_id, type: uuid, constraints: { primaryKey: true } }
+              - column: { name: type, type: varchar(100), constraints: { nullable: false } }
+              - column: { name: processed_at, type: timestamptz, constraints: { nullable: false } }

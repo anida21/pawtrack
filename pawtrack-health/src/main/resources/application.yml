@@ -1,0 +1,58 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: pawtrack-health
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:health_db}
+    username: ${DB_USER:health}
+    password: ${DB_PASSWORD:health}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: 5672
+    username: ${RABBITMQ_USER:pawtrack}
+    password: ${RABBITMQ_PASSWORD:pawtrack}
+    listener:
+      simple:
+        # A message that still fails after the retries is rejected and goes to its .dlq (events.md).
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 500ms
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://keycloak.pawtrack.local:8180/realms/pawtrack}
+
+pawtrack:
+  events:
+    exchange: pawtrack.events
+    dead-letter-exchange: pawtrack.events.dlx
+    pet-queue: health.pet-events
+  pet:
+    url: ${PET_URL:http://localhost:8082}
+    connect-timeout: 2s
+    read-timeout: 5s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html

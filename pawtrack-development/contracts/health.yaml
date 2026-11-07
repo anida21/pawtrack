@@ -1,11 +1,16 @@
 openapi: 3.0.3
 info:
   title: PawTrack Health API
-  version: 1.0.0
+  version: 1.1.0
   description: |
     Health records of a pet. Access rule: caller may access `/pets/{petId}/**` only if
     pet `GET /api/v1/pets/{petId}` with the forwarded token returns 200.
-    SITTER role is enforced by pet service; health only needs read vs write = same rule.
+    SITTER role is enforced by pet service; health only needs read vs write = same rule
+    (so anyone who may read the pet, SITTER included, may also add and change its health records).
+    Pet answering 404 → 404, 403 → 403; if pet cannot be reached (or answers anything else) → 503.
+    A record id that does not exist, was deleted, or belongs to another pet is 404.
+    Records of a pet that pet reports as deleted (`pet.deleted`) are soft-deleted.
+    "Today" is the current UTC date.
 servers:
   - url: http://health.pawtrack.local:8083
 security:
@@ -14,9 +19,15 @@ paths:
   /api/v1/pets/{petId}/vaccinations:
     parameters: [ { $ref: '#/components/parameters/PetId' } ]
     get:
+      summary: Newest first (administeredOn descending).
       operationId: listVaccinations
       responses:
         '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Vaccination' } } } } }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
     post:
       summary: Publishes health.vaccination.recorded (with nextDueDate if set).
       operationId: createVaccination
@@ -24,83 +35,166 @@ paths:
       responses:
         '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Vaccination' } } } }
         '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
   /api/v1/pets/{petId}/vaccinations/{id}:
     parameters: [ { $ref: '#/components/parameters/PetId' }, { $ref: '#/components/parameters/Id' } ]
     put:
+      summary: Full replace of the editable fields. Publishes no event.
       operationId: updateVaccination
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/VaccinationRequest' } } } }
       responses:
         '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Vaccination' } } } }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
     delete:
       operationId: deleteVaccination
-      responses: { '204': { description: Deleted } }
+      responses:
+        '204': { description: Deleted }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
   /api/v1/pets/{petId}/vet-visits:
     parameters: [ { $ref: '#/components/parameters/PetId' } ]
     get:
+      summary: Newest first (visitDate descending).
       operationId: listVetVisits
       responses:
         '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/VetVisit' } } } } }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
     post:
       operationId: createVetVisit
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/VetVisitRequest' } } } }
       responses:
         '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/VetVisit' } } } }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
   /api/v1/pets/{petId}/vet-visits/{id}:
     parameters: [ { $ref: '#/components/parameters/PetId' }, { $ref: '#/components/parameters/Id' } ]
     put:
+      summary: Full replace of the editable fields.
       operationId: updateVetVisit
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/VetVisitRequest' } } } }
       responses:
         '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/VetVisit' } } } }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
     delete:
       operationId: deleteVetVisit
-      responses: { '204': { description: Deleted } }
+      responses:
+        '204': { description: Deleted }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
   /api/v1/pets/{petId}/medications:
     parameters: [ { $ref: '#/components/parameters/PetId' } ]
     get:
+      summary: Newest first (startDate descending). activeOnly=true returns only active medications.
       operationId: listMedications
       parameters: [ { name: activeOnly, in: query, schema: { type: boolean, default: false } } ]
       responses:
         '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Medication' } } } } }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
     post:
       summary: Publishes health.medication.scheduled.
       operationId: createMedication
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/MedicationRequest' } } } }
       responses:
         '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Medication' } } } }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
   /api/v1/pets/{petId}/medications/{id}:
     parameters: [ { $ref: '#/components/parameters/PetId' }, { $ref: '#/components/parameters/Id' } ]
     put:
-      summary: Publishes health.medication.scheduled again (notification replaces reminders).
+      summary: Publishes health.medication.scheduled again (notification replaces reminders). Full replace.
       operationId: updateMedication
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/MedicationRequest' } } } }
       responses:
         '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Medication' } } } }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
     delete:
       summary: Publishes health.medication.cancelled.
       operationId: deleteMedication
-      responses: { '204': { description: Deleted } }
+      responses:
+        '204': { description: Deleted }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
   /api/v1/pets/{petId}/weights:
     parameters: [ { $ref: '#/components/parameters/PetId' } ]
     get:
+      summary: Oldest first (measuredOn ascending, for charts). from/to are inclusive; from after to → 400.
       operationId: listWeights
       parameters:
         - { name: from, in: query, schema: { type: string, format: date } }
         - { name: to, in: query, schema: { type: string, format: date } }
       responses:
         '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Weight' } } } } }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
     post:
       operationId: createWeight
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/WeightRequest' } } } }
       responses:
         '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Weight' } } } }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
   /api/v1/pets/{petId}/summary:
     parameters: [ { $ref: '#/components/parameters/PetId' } ]
     get:
       summary: Dashboard card data for a pet.
+      description: |
+        latestWeightKg: weight with the latest measuredOn. lastVetVisit: latest visitDate not in the future.
+        Vaccinations count per vaccine (case-insensitive): only the most recent administration of each vaccine
+        is considered. nextVaccinationDue: earliest of their nextDueDate that is today or later;
+        overdueVaccinations: how many of them have a nextDueDate before today.
+        activeMedications: number of active medications. Fields without data are null.
       operationId: getHealthSummary
       responses:
         '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/HealthSummary' } } } }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
 components:
   securitySchemes:
     bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
@@ -118,8 +212,9 @@ components:
     VaccinationRequest:
       type: object
       required: [vaccine, administeredOn]
+      description: administeredOn must not be in the future; nextDueDate must not be before administeredOn.
       properties:
-        vaccine: { type: string, maxLength: 100, example: Rabies }
+        vaccine: { type: string, minLength: 1, maxLength: 100, example: Rabies }
         administeredOn: { type: string, format: date }
         nextDueDate: { type: string, format: date }
         batchNumber: { type: string, maxLength: 50 }
@@ -136,14 +231,15 @@ components:
     VetVisitRequest:
       type: object
       required: [visitDate, reason]
+      description: visitDate may be in the future (planned visit). cost is stored with 2 decimals (rounded half-up).
       properties:
         visitDate: { type: string, format: date-time }
         clinic: { type: string, maxLength: 120 }
         vetName: { type: string, maxLength: 100 }
-        reason: { type: string, maxLength: 200 }
+        reason: { type: string, minLength: 1, maxLength: 200 }
         diagnosis: { type: string, maxLength: 2000 }
         treatment: { type: string, maxLength: 2000 }
-        cost: { type: number, format: double, minimum: 0 }
+        cost: { type: number, format: double, minimum: 0, maximum: 1000000000 }
         currency: { type: string, pattern: '^[A-Z]{3}$', default: BAM }
     VetVisit:
       allOf:
@@ -156,9 +252,10 @@ components:
     MedicationRequest:
       type: object
       required: [name, dosage, startDate, frequency]
+      description: endDate must not be before startDate.
       properties:
-        name: { type: string, maxLength: 100 }
-        dosage: { type: string, maxLength: 60, example: 1 tablet }
+        name: { type: string, minLength: 1, maxLength: 100 }
+        dosage: { type: string, minLength: 1, maxLength: 60, example: 1 tablet }
         startDate: { type: string, format: date }
         endDate: { type: string, format: date }
         frequency: { type: string, enum: [ONCE, DAILY, TWICE_DAILY, WEEKLY, MONTHLY] }
@@ -171,10 +268,16 @@ components:
           properties:
             id: { type: string, format: uuid }
             petId: { type: string, format: uuid }
-            active: { type: boolean, readOnly: true }
+            active:
+              type: boolean
+              readOnly: true
+              description: |
+                Not finished yet: endDate is today or later, or there is no endDate
+                (for ONCE without endDate, startDate counts as the end). Upcoming medications are active.
     WeightRequest:
       type: object
       required: [measuredOn, weightKg]
+      description: measuredOn must not be in the future. weightKg is stored with 3 decimals (rounded half-up).
       properties:
         measuredOn: { type: string, format: date }
         weightKg: { type: number, format: double, minimum: 0.01, maximum: 200 }
