@@ -38,6 +38,8 @@ Pets of a household and their profile photos. Layout copied from `../pawtrack-id
   `__TypeId__` header); unreadable → `AmqpRejectAndDontRequeueException` (straight to DLQ); other failures are
   retried 3× (`spring.rabbitmq.listener.simple.retry`), then dead-lettered (`default-requeue-rejected: false`).
   Idempotency: insert the `eventId` into `processed_events` in the same transaction as the change.
+- No `MessageConverter` bean (JSON only via `RabbitTemplateCustomizer`): a bean would also reach the listeners and
+  deserialize by the sender's `__TypeId__`, dead-lettering every real event. Consumer tests send that header on purpose.
 - DLX: `pawtrack.events.dlx` is a **direct** exchange, routing key = DLQ name (events.md). Declare it the same way everywhere.
 - Calls to other services: blocking `RestClient` built with `RestClient.builder()` + `SimpleClientHttpRequestFactory`
   and explicit timeouts (see "Local machine note" below for why not Boot's builder / JDK HttpClient).

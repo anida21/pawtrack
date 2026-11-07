@@ -167,9 +167,14 @@ class PetEventListenerTest extends IntegrationTest {
         rabbitTemplate.send(EXCHANGE, PetEventMessage.PET_DELETED, json(body));
     }
 
+    /**
+     * Like a real producer's message: JSON plus Spring's {@code __TypeId__} header naming a class that does not
+     * exist here. The consumer must ignore it (regression: it used to dead-letter every real pet event).
+     */
     private static Message json(String body) {
         return MessageBuilder.withBody(body.getBytes(StandardCharsets.UTF_8))
             .setContentType(MessageProperties.CONTENT_TYPE_JSON)
+            .setHeader("__TypeId__", "com.pawtrack.pet.messaging.EventEnvelope")
             .build();
     }
 

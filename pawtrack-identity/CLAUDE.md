@@ -31,6 +31,11 @@
   so mapping runs inside the transaction (`open-in-view: false`).
 - Creation timestamps are set in entity constructors (not `@CreationTimestamp`, which only fills at flush).
 - Events: `IdentityEvent` records → `EventPublisher.publish(...)` → `RabbitEventRelay` (AFTER_COMMIT).
+- JSON for RabbitMQ is set only on the `RabbitTemplate` (`RabbitTemplateCustomizer` in `RabbitConfig`). Never declare a
+  `MessageConverter` bean: Boot also puts it on listeners, which then deserialize by the sender's `__TypeId__`
+  header and dead-letter every event from another service. Consumers parse the raw `Message` body.
+- First request of a new user may arrive in parallel (UI calls several endpoints after login): provisioning runs in
+  its own transaction (`UserProvisioner`), `User` is `Persistable` (always INSERT), losers re-read the row.
 - Tests extend `support.IntegrationTest` (shared Testcontainers context, `TestUser.jwt()`, `awaitEvent(...)`).
   RabbitMQ 4 rejects transient non-exclusive queues: declare test queues durable.
 

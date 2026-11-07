@@ -7,7 +7,7 @@ import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.QueueBuilder;
 import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.support.converter.JacksonJsonMessageConverter;
-import org.springframework.amqp.support.converter.MessageConverter;
+import org.springframework.boot.amqp.autoconfigure.RabbitTemplateCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -26,9 +26,15 @@ public class RabbitConfig {
         return new TopicExchange(properties.events().exchange(), true, false);
     }
 
+    /**
+     * JSON only for sending. Deliberately not a {@code MessageConverter} bean: Boot would also put it on the
+     * listener containers, where it deserializes by the sender's {@code __TypeId__} header (a class that only
+     * exists in the sending service) and dead-letters every real cross-service event.
+     * Consumers parse the raw {@code Message} body themselves.
+     */
     @Bean
-    MessageConverter jsonMessageConverter() {
-        return new JacksonJsonMessageConverter();
+    RabbitTemplateCustomizer jsonForSending() {
+        return template -> template.setMessageConverter(new JacksonJsonMessageConverter());
     }
 
     // ---- consumer: household events ----------------------------------------------------------------------

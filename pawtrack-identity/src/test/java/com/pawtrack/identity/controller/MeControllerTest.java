@@ -1,6 +1,13 @@
 package com.pawtrack.identity.controller;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import com.jayway.jsonpath.DocumentContext;
 import com.pawtrack.identity.support.IntegrationTest;
@@ -76,6 +83,44 @@ class MeControllerTest extends IntegrationTest {
 
         mvc.perform(get("/api/v1/me/households").with(alice.jwt()))
             .andExpect(jsonPath("$", hasSize(1)));
+    }
+
+    @Test
+    void firstCalls_inParallel_provisionTheUserOnce() throws Exception {
+        TestUser alice = TestUser.random("Alice");
+        int parallel = 8;
+        ExecutorService pool = Executors.newFixedThreadPool(parallel);
+        CountDownLatch start = new CountDownLatch(1);
+        try {
+            List<Future<Integer>> statuses = new ArrayList<>();
+            for (int i = 0; i < parallel; i++) {
+                String path = i % 2 == 0 ? "/api/v1/me" : "/api/v1/me/households";
+                statuses.add(pool.submit(() -> {
+                    start.await();
+                    return mvc.perform(get(path).with(alice.jwt())).andReturn().getResponse().getStatus();
+                }));
+            }
+            start.countDown();
+            for (Future<Integer> status : statuses) {
+                assertThat(status.get(30, TimeUnit.SECONDS)).isEqualTo(200);
+            }
+        } finally {
+            pool.shutdownNow();
+        }
+
+        mvc.perform(get("/api/v1/me/households").with(alice.jwt()))
+            .andExpect(jsonPath("$", hasSize(1)));
+    }
+
+    @Test
+    void getMe_withEmailOfAnotherAccount_returns409() throws Exception {
+        TestUser alice = TestUser.random("Alice");
+        TestUser impostor = TestUser.random("Impostor").withEmail(alice.email());
+        signIn(alice);
+
+        mvc.perform(get("/api/v1/me").with(impostor.jwt()))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.status").value(409));
     }
 
     @Test

@@ -46,6 +46,8 @@ Layout copied from `../pawtrack-identity` (the reference); consumer / HTTP clien
   Idempotency: `processed_events` row in the same transaction as the change (`service/PetCopyService`).
 - Local pet copy (`pets` table) is written only by native upserts in `PetCopyRepository` (safe against the consumer
   and request threads racing); once deleted it stays deleted. Every write request also refreshes it from pet's answer.
+- No `MessageConverter` bean (JSON only via `RabbitTemplateCustomizer`): a bean would also reach the listeners and
+  deserialize by the sender's `__TypeId__`, dead-lettering every real event. Consumer tests send that header on purpose.
 - DLX: `pawtrack.events.dlx` is a **direct** exchange, routing key = DLQ name (events.md). Declare it the same way everywhere.
 - Calls to pet: blocking `RestClient` built with `RestClient.builder()` + `SimpleClientHttpRequestFactory`
   and explicit timeouts (see "Local machine note").
