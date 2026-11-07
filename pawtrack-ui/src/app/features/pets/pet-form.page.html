@@ -1,0 +1,104 @@
+@if (loadError(); as err) {
+  <app-error-state [error]="err" backLink="/pets" backLabel="All pets" />
+} @else if (editing() && !original()) {
+  <div class="center-spinner"><mat-spinner diameter="48" aria-label="Loading pet" /></div>
+} @else {
+  <header class="page-header">
+    <a mat-icon-button [routerLink]="editing() ? ['/pets', petId()] : ['/pets']" aria-label="Back">
+      <mat-icon>arrow_back</mat-icon>
+    </a>
+    <h1>{{ editing() ? 'Edit ' + original()?.name : 'New pet' }}</h1>
+  </header>
+
+  <form class="surface-card" [formGroup]="form" (ngSubmit)="save()" novalidate>
+    <div class="form-grid">
+      <mat-form-field class="span-2">
+        <mat-label>Name</mat-label>
+        <input matInput formControlName="name" maxlength="60" required />
+        @if (form.controls.name.invalid) {
+          <mat-error>Please enter a name (max. 60 characters).</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field>
+        <mat-label>Species</mat-label>
+        <mat-select formControlName="species" required>
+          @for (s of speciesOptions; track s) {
+            <mat-option [value]="s">{{ s | species }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.species.invalid) {
+          <mat-error>Please choose a species.</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field>
+        <mat-label>Breed</mat-label>
+        <input matInput formControlName="breed" maxlength="80" />
+      </mat-form-field>
+
+      <mat-form-field>
+        <mat-label>Sex</mat-label>
+        <mat-select formControlName="sex">
+          <mat-option value="">–</mat-option>
+          @for (s of sexOptions; track s) {
+            <mat-option [value]="s">{{ sexLabels[s] }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-checkbox class="neutered" formControlName="neutered">Neutered / spayed</mat-checkbox>
+
+      <mat-form-field>
+        <mat-label>Birth date</mat-label>
+        <input matInput type="date" formControlName="birthDate" [max]="today" />
+      </mat-form-field>
+
+      <mat-form-field>
+        <mat-label>Colour</mat-label>
+        <input matInput formControlName="color" maxlength="60" />
+      </mat-form-field>
+
+      <mat-form-field>
+        <mat-label>Microchip number</mat-label>
+        <input matInput formControlName="microchipNumber" inputmode="numeric" maxlength="15" />
+        <mat-hint>15 digits</mat-hint>
+        @if (form.controls.microchipNumber.invalid) {
+          <mat-error>A microchip number has exactly 15 digits.</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field>
+        <mat-label>Household</mat-label>
+        <mat-select formControlName="householdId" required>
+          @for (h of session.writableHouseholds(); track h.householdId) {
+            <mat-option [value]="h.householdId">{{ h.householdName }}</mat-option>
+          }
+        </mat-select>
+        @if (editing()) {
+          <mat-hint>Changing it moves the pet to another household.</mat-hint>
+        }
+        @if (form.controls.householdId.invalid) {
+          <mat-error>Please choose a household.</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field class="span-2">
+        <mat-label>Notes</mat-label>
+        <textarea matInput formControlName="notes" rows="4" maxlength="2000"></textarea>
+        <mat-hint align="end">{{ form.controls.notes.value.length }} / 2000</mat-hint>
+      </mat-form-field>
+    </div>
+
+    @if (serverError(); as message) {
+      <p class="server-error" role="alert">{{ message }}</p>
+    }
+
+    <div class="form-actions">
+      <a mat-button [routerLink]="editing() ? ['/pets', petId()] : ['/pets']">Cancel</a>
+      <button mat-flat-button type="submit" [disabled]="saving()">
+        {{ saving() ? 'Saving…' : editing() ? 'Save changes' : 'Add pet' }}
+      </button>
+    </div>
+  </form>
+}

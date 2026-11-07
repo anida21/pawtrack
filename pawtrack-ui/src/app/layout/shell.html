@@ -1,0 +1,62 @@
+<mat-toolbar class="topbar">
+  @if (handset()) {
+    <button mat-icon-button aria-label="Open navigation" (click)="menuOpen.set(!menuOpen())">
+      <mat-icon>menu</mat-icon>
+    </button>
+  }
+  <a class="brand" routerLink="/pets" aria-label="PawTrack home">
+    <span class="brand-mark"><mat-icon>pets</mat-icon></span>
+    <span class="brand-name">PawTrack</span>
+  </a>
+  <span class="spacer"></span>
+  @if (session.user(); as user) {
+    <button mat-button class="user-button" [matMenuTriggerFor]="userMenu" aria-label="Account menu">
+      <span class="avatar">{{ initials() }}</span>
+      @if (!handset()) {
+        <span class="user-name">{{ user.displayName }}</span>
+      }
+    </button>
+    <mat-menu #userMenu="matMenu" xPosition="before">
+      <div class="menu-header">
+        <strong>{{ user.displayName }}</strong>
+        <span>{{ user.email }}</span>
+      </div>
+      <a mat-menu-item routerLink="/profile"><mat-icon>person</mat-icon> Profile</a>
+      <button mat-menu-item (click)="logout()"><mat-icon>logout</mat-icon> Sign out</button>
+    </mat-menu>
+  }
+</mat-toolbar>
+
+<mat-sidenav-container class="layout">
+  <mat-sidenav
+    class="sidenav"
+    [mode]="handset() ? 'over' : 'side'"
+    [opened]="sidenavOpened()"
+    (closedStart)="menuOpen.set(false)"
+  >
+    <mat-nav-list>
+      @for (item of nav; track item.link) {
+        <a mat-list-item [routerLink]="item.link" routerLinkActive #rla="routerLinkActive" [activated]="rla.isActive">
+          <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+          <span matListItemTitle>{{ item.label }}</span>
+        </a>
+      }
+    </mat-nav-list>
+    <div class="sidenav-footer">
+      <span>Health records</span>
+      <span class="soon">coming soon</span>
+    </div>
+  </mat-sidenav>
+
+  <mat-sidenav-content>
+    <main class="content">
+      @if (loadError(); as error) {
+        <app-error-state [error]="error" (retry)="load()" />
+      } @else if (session.loaded()) {
+        <router-outlet />
+      } @else {
+        <div class="center-spinner"><mat-spinner diameter="48" aria-label="Loading" /></div>
+      }
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>

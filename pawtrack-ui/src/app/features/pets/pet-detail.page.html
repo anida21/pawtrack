@@ -1,0 +1,60 @@
+@if (error(); as err) {
+  <app-error-state [error]="err" backLink="/pets" backLabel="All pets" (retry)="load()" />
+} @else if (pet(); as p) {
+  <header class="page-header">
+    <a mat-icon-button routerLink="/pets" aria-label="Back to pets"><mat-icon>arrow_back</mat-icon></a>
+    <h1>{{ p.name }}</h1>
+    @if (canEdit()) {
+      <a mat-stroked-button [routerLink]="['/pets', p.id, 'edit']"><mat-icon>edit</mat-icon> Edit</a>
+      <button mat-button class="danger" (click)="delete(p)"><mat-icon>delete</mat-icon> Delete</button>
+    }
+  </header>
+
+  <div class="layout">
+    <section class="photo-card">
+      <app-pet-photo class="photo" [pet]="p" />
+      @if (uploading()) {
+        <mat-progress-bar mode="indeterminate" aria-label="Uploading photo" />
+      }
+      @if (canEdit()) {
+        <label class="upload">
+          <input type="file" class="visually-hidden" [accept]="accept" (change)="onFile($event, p)"
+            [disabled]="uploading()" />
+          <mat-icon>photo_camera</mat-icon>
+          {{ p.hasPhoto ? 'Change photo' : 'Add photo' }}
+        </label>
+        <p class="upload-hint">JPEG, PNG or WebP · max. 5 MB</p>
+      }
+    </section>
+
+    <section class="surface-card facts" aria-label="Details">
+      <div class="headline">
+        <span class="species-badge"><mat-icon>{{ p.species | species: 'icon' }}</mat-icon>{{ p.species | species }}</span>
+        @if (p.breed) {
+          <span class="breed">{{ p.breed }}</span>
+        }
+      </div>
+      <dl>
+        <div><dt>Household</dt><dd><a [routerLink]="['/households', p.householdId]">{{ session.householdName(p.householdId) }}</a></dd></div>
+        <div><dt>Age</dt><dd>{{ (p.ageInMonths | age) || '–' }}</dd></div>
+        <div><dt>Birth date</dt><dd>{{ p.birthDate ? (p.birthDate | date: 'mediumDate') : '–' }}</dd></div>
+        <div><dt>Sex</dt><dd>{{ p.sex ? sexLabels[p.sex] : '–' }}{{ p.neutered ? ' · neutered' : '' }}</dd></div>
+        <div><dt>Colour</dt><dd>{{ p.color || '–' }}</dd></div>
+        <div><dt>Microchip</dt><dd class="mono">{{ p.microchipNumber || '–' }}</dd></div>
+      </dl>
+      @if (p.notes) {
+        <h2>Notes</h2>
+        <p class="notes">{{ p.notes }}</p>
+      }
+      <p class="audit">Added {{ p.createdAt | date: 'mediumDate' }}@if (p.updatedAt) {<span> · updated {{ p.updatedAt | date: 'mediumDate' }}</span>}</p>
+    </section>
+
+    <section class="state-card health" aria-label="Health records">
+      <mat-icon class="state-icon">vaccines</mat-icon>
+      <h2>Health records</h2>
+      <p>Vaccinations, vet visits, medications and weight tracking are coming soon.</p>
+    </section>
+  </div>
+} @else {
+  <div class="center-spinner"><mat-spinner diameter="48" aria-label="Loading pet" /></div>
+}

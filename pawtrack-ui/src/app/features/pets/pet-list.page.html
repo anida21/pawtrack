@@ -1,0 +1,89 @@
+<header class="page-header">
+  <h1>Pets</h1>
+  @if (canAdd()) {
+    <a mat-flat-button routerLink="/pets/new" [queryParams]="{ householdId: filter().householdId }">
+      <mat-icon>add</mat-icon> Add pet
+    </a>
+  }
+</header>
+
+<div class="filters">
+  <mat-form-field subscriptSizing="dynamic">
+    <mat-label>Household</mat-label>
+    <mat-select [value]="filter().householdId ?? ''" (selectionChange)="setFilter({ householdId: $event.value })">
+      <mat-option value="">All households</mat-option>
+      @for (h of session.households(); track h.householdId) {
+        <mat-option [value]="h.householdId">{{ h.householdName }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+  <mat-form-field subscriptSizing="dynamic">
+    <mat-label>Species</mat-label>
+    <mat-select [value]="filter().species ?? ''" (selectionChange)="setFilter({ species: $event.value })">
+      <mat-option value="">All species</mat-option>
+      @for (s of speciesOptions; track s) {
+        <mat-option [value]="s">{{ s | species }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+  @if (hasFilter()) {
+    <button mat-button (click)="clearFilters()"><mat-icon>filter_alt_off</mat-icon> Clear filters</button>
+  }
+</div>
+
+@let s = state();
+@if (s.status === 'error') {
+  <app-error-state [error]="s.error" />
+} @else if (s.status === 'loading') {
+  <mat-progress-bar mode="indeterminate" aria-label="Loading pets" />
+} @else {
+  @if (s.page.content?.length) {
+    <ul class="grid" role="list">
+      @for (pet of s.page.content; track pet.id) {
+        <li>
+          <a class="pet-card" matRipple [routerLink]="['/pets', pet.id]">
+            <app-pet-photo class="photo" [pet]="pet" />
+            <span class="body">
+              <span class="name">{{ pet.name }}</span>
+              <span class="meta">
+                {{ pet.species | species }}@if (pet.breed) {<span> · {{ pet.breed }}</span>}
+              </span>
+              <span class="meta">
+                @if (pet.ageInMonths !== undefined) {
+                  <span>{{ pet.ageInMonths | age }}</span>
+                }
+                @if (showHousehold()) {
+                  <span class="household"><mat-icon inline>home</mat-icon>{{ session.householdName(pet.householdId) }}</span>
+                }
+              </span>
+            </span>
+          </a>
+        </li>
+      }
+    </ul>
+    <mat-paginator
+      [length]="s.page.totalElements ?? 0"
+      [pageIndex]="filter().page"
+      [pageSize]="filter().size"
+      [pageSizeOptions]="pageSizes"
+      (page)="onPage($event)"
+      aria-label="Pets pages"
+    />
+  } @else if (hasFilter() || filter().page > 0) {
+    <div class="state-card">
+      <mat-icon class="state-icon">search_off</mat-icon>
+      <h2>No pets match</h2>
+      <p>Try another household or species.</p>
+      <div class="state-actions"><button mat-stroked-button (click)="clearFilters()">Clear filters</button></div>
+    </div>
+  } @else {
+    <div class="state-card">
+      <mat-icon class="state-icon">pets</mat-icon>
+      <h2>No pets yet</h2>
+      <p>Add your first pet to keep its profile, photo and health records in one place.</p>
+      @if (canAdd()) {
+        <div class="state-actions"><a mat-flat-button routerLink="/pets/new">Add a pet</a></div>
+      }
+    </div>
+  }
+}

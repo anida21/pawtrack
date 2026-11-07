@@ -1,0 +1,8 @@
+node_modules
+dist
+.angular
+coverage
+src/app/core/api/generated
+Dockerfile
+.dockerignore
+*.md

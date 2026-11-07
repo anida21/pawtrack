@@ -1,0 +1,63 @@
+name: ui
+
+# Same shape as identity.yml. The UI generates its API types from the contracts, so contract changes
+# trigger this workflow too.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'pawtrack-ui/**'
+      - 'pawtrack-development/contracts/**'
+      - '.github/workflows/ui.yml'
+  pull_request:
+    paths:
+      - 'pawtrack-ui/**'
+      - 'pawtrack-development/contracts/**'
+      - '.github/workflows/ui.yml'
+
+permissions:
+  contents: read
+  packages: write
+
+defaults:
+  run:
+    working-directory: pawtrack-ui
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: pawtrack-ui/package-lock.json
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Unit tests (Vitest, headless)
+        run: npm test
+      - name: Production build
+        run: npm run build
+
+  docker:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: pawtrack-ui
+          build-contexts: |
+            contracts=pawtrack-development/contracts
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/pawtrack-ui:latest
+            ghcr.io/${{ github.repository_owner }}/pawtrack-ui:${{ github.sha }}

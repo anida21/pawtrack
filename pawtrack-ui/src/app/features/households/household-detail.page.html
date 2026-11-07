@@ -1,0 +1,61 @@
+@if (error(); as err) {
+  <app-error-state [error]="err" backLink="/households" backLabel="All households" (retry)="load()" />
+} @else if (household(); as h) {
+  <header class="page-header">
+    <a mat-icon-button routerLink="/households" aria-label="Back to households"><mat-icon>arrow_back</mat-icon></a>
+    <h1>{{ h.name }}</h1>
+    <a mat-stroked-button [routerLink]="['/pets']" [queryParams]="{ householdId: h.id }">
+      <mat-icon>pets</mat-icon> Pets
+    </a>
+    @if (isOwner()) {
+      <button mat-flat-button (click)="invite(h)"><mat-icon>person_add</mat-icon> Invite</button>
+      <button mat-icon-button [matMenuTriggerFor]="more" aria-label="More household actions">
+        <mat-icon>more_vert</mat-icon>
+      </button>
+      <mat-menu #more="matMenu" xPosition="before">
+        <button mat-menu-item (click)="rename(h)"><mat-icon>edit</mat-icon> Rename</button>
+        <button mat-menu-item class="danger" (click)="delete(h)"><mat-icon>delete</mat-icon> Delete household</button>
+      </mat-menu>
+    }
+    <p class="subtitle">
+      You are <app-role-chip [role]="myRole()" /> · created {{ h.createdAt | date: 'mediumDate' }}
+    </p>
+  </header>
+
+  <section class="surface-card" aria-labelledby="members-title">
+    <h2 id="members-title" class="section-title">Members <span class="count">{{ members().length }}</span></h2>
+    <ul class="members" role="list">
+      @for (member of members(); track member.userId) {
+        <li class="member">
+          <span class="avatar" aria-hidden="true">{{ initials(member) }}</span>
+          <span class="who">
+            <span class="name">
+              {{ member.displayName }}
+              @if (member.userId === myId()) {
+                <span class="you">(you)</span>
+              }
+            </span>
+            <span class="email">{{ member.email }}</span>
+          </span>
+          <span class="joined">joined {{ member.joinedAt | date: 'mediumDate' }}</span>
+          <app-role-chip [role]="member.role" />
+          @if (member.userId === myId()) {
+            <button mat-icon-button (click)="remove(h, member)" [disabled]="busy()" matTooltip="Leave household"
+              aria-label="Leave household">
+              <mat-icon>logout</mat-icon>
+            </button>
+          } @else if (isOwner()) {
+            <button mat-icon-button (click)="remove(h, member)" [disabled]="busy()"
+              [matTooltip]="'Remove ' + member.displayName" [attr.aria-label]="'Remove ' + member.displayName">
+              <mat-icon>person_remove</mat-icon>
+            </button>
+          } @else {
+            <span class="action-spacer"></span>
+          }
+        </li>
+      }
+    </ul>
+  </section>
+} @else {
+  <div class="center-spinner"><mat-spinner diameter="48" aria-label="Loading household" /></div>
+}
