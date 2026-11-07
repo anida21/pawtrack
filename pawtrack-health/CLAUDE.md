@@ -31,7 +31,7 @@ Layout copied from `../pawtrack-identity` (the reference); consumer / HTTP clien
 - [x] `GET/POST /medications` (`activeOnly`), `PUT/DELETE /medications/{id}`
 - [x] `GET/POST /weights` (`from`/`to`)
 - [x] `GET /summary`
-- [x] Event publishing (`health.vaccination.recorded` on create and update, `health.medication.scheduled`, `health.medication.cancelled`) after commit
+- [x] Event publishing (`health.vaccination.recorded` on create and update, `health.vaccination.deleted`, `health.medication.scheduled`, `health.medication.cancelled`) after commit
 - [x] `pet.created` / `pet.deleted` consumer: queue `health.pet-events` + DLQ, idempotent (`processed_events`),
       keeps the local pet copy, soft-deletes records of deleted pets
 - [x] Tests for every endpoint incl. 400/401/403/404/503, consumer, events, pet client

@@ -35,6 +35,7 @@
 | `pet.updated` | pet | `petId, householdId, name, species` | health, notification: upsert the local `petId → householdId, name` copy. Sent on every `PUT /pets/{petId}`; `householdId` is the new one if the pet was moved |
 | `pet.deleted` | pet | `petId, householdId` | health (soft-delete records), notification (cancel reminders). Also sent for every pet that is soft-deleted because its household was deleted (`household.deleted`) |
 | `health.vaccination.recorded` | health | `vaccinationId, petId, householdId, vaccine, administeredOn, nextDueDate?` | notification: if `nextDueDate`, reminders 7 days before and on the day, 09:00 user tz. Sent on create **and on every update** (same `vaccinationId`): replace this vaccination's pending reminders, and cancel them when `nextDueDate` is missing |
+| `health.vaccination.deleted` | health | `vaccinationId, petId` | notification: cancel this vaccination's pending reminders. Sent on `DELETE /pets/{petId}/vaccinations/{id}` |
 | `health.medication.scheduled` | health | `medicationId, petId, householdId, name, dosage, startDate, endDate?, frequency, timeOfDay?` | notification: replace future reminders of this medication (max 30 days ahead, rolling) |
 | `health.medication.cancelled` | health | `medicationId, petId` | notification: cancel pending reminders |
 

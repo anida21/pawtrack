@@ -60,7 +60,9 @@ public class VaccinationService {
     @Transactional
     public void delete(Jwt jwt, UUID petId, UUID id) {
         access.checkForWrite(jwt, petId);
-        find(petId, id).markDeleted();
+        Vaccination vaccination = find(petId, id);
+        vaccination.markDeleted();
+        eventPublisher.publish(HealthEvent.VaccinationDeleted.of(vaccination));
     }
 
     private Vaccination find(UUID petId, UUID id) {

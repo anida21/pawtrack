@@ -1,6 +1,7 @@
 package com.pawtrack.health.controller;
 
 import java.time.LocalDate;
+import java.util.Map;
 import java.util.UUID;
 
 import com.jayway.jsonpath.DocumentContext;
@@ -167,6 +168,10 @@ class VaccinationControllerTest extends IntegrationTest {
         mvc.perform(delete(path(petId, "vaccinations") + "/" + id).with(owner.jwt()))
             .andExpect(status().isNoContent());
 
+        // notification cancels the vaccination's pending reminders from this event (events.md)
+        DocumentContext event = awaitEvent("health.vaccination.deleted", data("vaccinationId", id));
+        assertThat(event.read("$.data", Map.class)).containsOnlyKeys("vaccinationId", "petId");
+        assertThat(event.read("$.data.petId", String.class)).isEqualTo(petId.toString());
         mvc.perform(get(path(petId, "vaccinations")).with(owner.jwt()))
             .andExpect(jsonPath("$.length()").value(0));
         mvc.perform(delete(path(petId, "vaccinations") + "/" + id).with(owner.jwt()))

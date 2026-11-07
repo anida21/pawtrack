@@ -119,6 +119,19 @@ class HealthEventsTest extends IntegrationTest {
             .allSatisfy(r -> assertThat(r.getStatus()).isEqualTo(ReminderStatus.CANCELLED));
     }
 
+    @Test
+    void vaccinationDeleted_cancelsItsPendingReminders_only() {
+        UUID deleted = recordVaccination(today.plusDays(30));
+        UUID kept = recordVaccination(today.plusDays(40));
+
+        publish("health.vaccination.deleted", data("vaccinationId", deleted, "petId", home.petId()));
+
+        assertThat(remindersOf(ReminderSource.VACCINATION, deleted)).hasSize(2)
+            .allSatisfy(r -> assertThat(r.getStatus()).isEqualTo(ReminderStatus.CANCELLED));
+        assertThat(remindersOf(ReminderSource.VACCINATION, kept)).hasSize(2)
+            .allSatisfy(r -> assertThat(r.getStatus()).isEqualTo(ReminderStatus.PENDING));
+    }
+
     // ---- medications ---------------------------------------------------------------------------------------
 
     @Test

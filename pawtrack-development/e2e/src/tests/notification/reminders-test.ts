@@ -44,6 +44,21 @@ describe('notification: reminders generated from events', () => {
     }, 20_000, 'reminders to be cancelled');
   });
 
+  it('cancels the reminders of a deleted vaccination (health.vaccination.deleted)', async () => {
+    const vaccination = await api('alice').post<Vaccination>(`/api/v1/pets/${petId}/vaccinations`,
+      vaccinationRequest({ vaccine: 'DHPPi', nextDueDate: isoDate(15) }));
+    const id = vaccination.body.id!;
+    await eventually(async () => ((await remindersOf('alice', id))?.length === 2 ? true : undefined), 20_000,
+      'two vaccination reminders');
+
+    expect((await api('alice').delete(`/api/v1/pets/${petId}/vaccinations/${id}`)).status).toBe(204);
+
+    await eventually(async () => {
+      const list = await remindersOf('alice', id);
+      return list && list.length === 2 && list.every((r) => r.status === 'CANCELLED') ? true : undefined;
+    }, 20_000, 'reminders of the deleted vaccination to be cancelled');
+  });
+
   it('shares reminders with household members and lets them mark one done', async () => {
     await addMember('alice', householdId, 'bob', 'MEMBER');
     const custom = await api('alice').post<Reminder>('/api/v1/reminders', {

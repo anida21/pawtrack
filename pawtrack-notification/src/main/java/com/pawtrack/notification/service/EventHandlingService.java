@@ -16,6 +16,7 @@ import com.pawtrack.notification.messaging.ConsumedEvent.HouseholdInvitationCrea
 import com.pawtrack.notification.messaging.ConsumedEvent.HouseholdMemberAdded;
 import com.pawtrack.notification.messaging.ConsumedEvent.HouseholdMemberRemoved;
 import com.pawtrack.notification.messaging.ConsumedEvent.MedicationCancelled;
+import com.pawtrack.notification.messaging.ConsumedEvent.VaccinationDeleted;
 import com.pawtrack.notification.messaging.ConsumedEvent.MedicationScheduled;
 import com.pawtrack.notification.messaging.ConsumedEvent.PetCreated;
 import com.pawtrack.notification.messaging.ConsumedEvent.PetDeleted;
@@ -79,6 +80,8 @@ public class EventHandlingService {
             petDeleted(e, now);
         } else if (event instanceof VaccinationRecorded e) {
             vaccinationReminders.onRecorded(e);
+        } else if (event instanceof VaccinationDeleted e) {
+            vaccinationReminders.onDeleted(e);
         } else if (event instanceof MedicationScheduled e) {
             medicationReminders.onScheduled(e);
         } else if (event instanceof MedicationCancelled e) {

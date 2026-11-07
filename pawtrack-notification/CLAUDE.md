@@ -23,7 +23,8 @@ Reminders (from health events + custom ones) and email (Mailpit locally). Port 8
 ## How it works
 - Queues (one per producer, each with `<queue>.dlq` on the direct DLX `pawtrack.events.dlx`):
   `notification.identity-events` (`household.#`, `user.updated`), `notification.pet-events` (`pet.created|updated|deleted`),
-  `notification.health-events` (`health.vaccination.recorded`, `health.medication.scheduled|cancelled`).
+  `notification.health-events` (`health.vaccination.recorded|deleted`, `health.medication.scheduled|cancelled`).
+  `health.vaccination.deleted` cancels that vaccination's pending reminders.
 - `RabbitEventListener` parses the envelope → `EventHandlingService.handle` (one transaction): claims the eventId with
   `INSERT … ON CONFLICT DO NOTHING` (0 rows = duplicate → skip). Failures retry 3× then dead-letter.
 - Access: local `household_members` copy. Unknown pet/reminder → 404, other household → 403. No call to identity/pet.
@@ -46,7 +47,6 @@ Reminders (from health events + custom ones) and email (Mailpit locally). Port 8
 - `pet.updated` is bound to `notification.pet-events` and handled like `pet.created` (upsert).
 
 ## Known gaps (not in the contract)
-- Vaccination DELETE sends no event, so its reminders stay (needs e.g. `health.vaccination.deleted`).
 - Reminders keep the household time zone of when they were generated.
 
 Done = all boxes checked, `mvn verify` green, endpoints match `notification.yaml`.

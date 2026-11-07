@@ -28,6 +28,7 @@ public sealed interface ConsumedEvent {
         Map.entry("pet.updated", PetCreated.class),
         Map.entry("pet.deleted", PetDeleted.class),
         Map.entry("health.vaccination.recorded", VaccinationRecorded.class),
+        Map.entry("health.vaccination.deleted", VaccinationDeleted.class),
         Map.entry("health.medication.scheduled", MedicationScheduled.class),
         Map.entry("health.medication.cancelled", MedicationCancelled.class));
 
@@ -61,6 +62,9 @@ public sealed interface ConsumedEvent {
     record MedicationScheduled(UUID medicationId, UUID petId, UUID householdId, String name, String dosage,
                                LocalDate startDate, LocalDate endDate, MedicationFrequency frequency,
                                LocalTime timeOfDay) implements ConsumedEvent {
+    }
+
+    record VaccinationDeleted(UUID vaccinationId, UUID petId) implements ConsumedEvent {
     }
 
     record MedicationCancelled(UUID medicationId, UUID petId) implements ConsumedEvent {

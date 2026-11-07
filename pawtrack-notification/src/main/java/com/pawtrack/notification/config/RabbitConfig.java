@@ -30,8 +30,8 @@ public class RabbitConfig {
     static final Map<String, List<String>> BINDINGS = Map.of(
         IDENTITY_QUEUE, List.of("household.#", "user.updated"),
         PET_QUEUE, List.of("pet.created", "pet.updated", "pet.deleted"),
-        HEALTH_QUEUE, List.of("health.vaccination.recorded", "health.medication.scheduled",
-            "health.medication.cancelled"));
+        HEALTH_QUEUE, List.of("health.vaccination.recorded", "health.vaccination.deleted",
+            "health.medication.scheduled", "health.medication.cancelled"));
 
     @Bean
     TopicExchange eventsExchange(PawtrackProperties properties) {

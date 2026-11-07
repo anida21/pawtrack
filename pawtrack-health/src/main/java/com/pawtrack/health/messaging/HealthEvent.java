@@ -49,6 +49,18 @@ public sealed interface HealthEvent {
         }
     }
 
+    record VaccinationDeleted(UUID vaccinationId, UUID petId) implements HealthEvent {
+
+        public static VaccinationDeleted of(Vaccination vaccination) {
+            return new VaccinationDeleted(vaccination.getId(), vaccination.getPetId());
+        }
+
+        @Override
+        public String type() {
+            return "health.vaccination.deleted";
+        }
+    }
+
     record MedicationCancelled(UUID medicationId, UUID petId) implements HealthEvent {
 
         public static MedicationCancelled of(Medication medication) {

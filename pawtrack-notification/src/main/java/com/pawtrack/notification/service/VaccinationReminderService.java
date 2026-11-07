@@ -10,6 +10,7 @@ import java.util.List;
 import com.pawtrack.notification.config.PawtrackProperties;
 import com.pawtrack.notification.entity.Reminder;
 import com.pawtrack.notification.entity.ReminderSource;
+import com.pawtrack.notification.messaging.ConsumedEvent.VaccinationDeleted;
 import com.pawtrack.notification.messaging.ConsumedEvent.VaccinationRecorded;
 import com.pawtrack.notification.repository.ReminderRepository;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,12 @@ public class VaccinationReminderService {
     private final PetNames petNames;
     private final PawtrackProperties properties;
     private final Clock clock;
+
+    /** The vaccination record was deleted in health: its reminders must not fire any more. */
+    @Transactional
+    public void onDeleted(VaccinationDeleted event) {
+        reminderRepository.cancelPendingBySource(ReminderSource.VACCINATION, event.vaccinationId(), clock.instant());
+    }
 
     @Transactional
     public void onRecorded(VaccinationRecorded event) {
