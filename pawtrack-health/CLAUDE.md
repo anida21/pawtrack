@@ -3,7 +3,7 @@
 Vaccinations, vet visits, medications and weight history of a pet, plus the dashboard summary.
 Layout copied from `../pawtrack-identity` (the reference); consumer / HTTP client / test patterns from `../pawtrack-pet`.
 
-- Contract (source of truth): `../pawtrack-development/contracts/health.yaml` (1.1.0), events: `../pawtrack-development/contracts/events.md`.
+- Contract (source of truth): `../pawtrack-development/contracts/health.yaml` (1.2.0), events: `../pawtrack-development/contracts/events.md`.
   Do not read other service folders.
 - Stack: Spring Boot 4.1, Java 17, Postgres + Liquibase, MapStruct + Lombok, springdoc, RabbitMQ, OAuth2 resource server (Keycloak).
 - Packages: `com.pawtrack.health.{config,controller,dto,entity,exception,mapper,messaging,repository,service}`.
@@ -31,7 +31,7 @@ Layout copied from `../pawtrack-identity` (the reference); consumer / HTTP clien
 - [x] `GET/POST /medications` (`activeOnly`), `PUT/DELETE /medications/{id}`
 - [x] `GET/POST /weights` (`from`/`to`)
 - [x] `GET /summary`
-- [x] Event publishing (`health.vaccination.recorded`, `health.medication.scheduled`, `health.medication.cancelled`) after commit
+- [x] Event publishing (`health.vaccination.recorded` on create and update, `health.medication.scheduled`, `health.medication.cancelled`) after commit
 - [x] `pet.created` / `pet.deleted` consumer: queue `health.pet-events` + DLQ, idempotent (`processed_events`),
       keeps the local pet copy, soft-deletes records of deleted pets
 - [x] Tests for every endpoint incl. 400/401/403/404/503, consumer, events, pet client
@@ -55,7 +55,7 @@ Layout copied from `../pawtrack-identity` (the reference); consumer / HTTP clien
   `RestPetClientTest` covers the real HTTP client with `MockRestServiceServer`. `AccessRulesTest` runs the
   401/403/404/503/400 checks for all 15 operations. RabbitMQ 4 rejects transient non-exclusive queues: declare test queues durable.
 
-## Behaviour beyond the contract text (also written into health.yaml 1.1.0)
+## Behaviour beyond the contract text (also written into health.yaml)
 - Sort orders: vaccinations by `administeredOn` desc, vet visits by `visitDate` desc, medications by `startDate` desc,
   weights by `measuredOn` asc.
 - Validation: `administeredOn`/`measuredOn` not in the future, `nextDueDate >= administeredOn`, `endDate >= startDate`,
@@ -64,7 +64,8 @@ Layout copied from `../pawtrack-identity` (the reference); consumer / HTTP clien
 - Medication `active` = not finished (endDate today or later / no endDate; ONCE without endDate ends on startDate).
 - Summary: per vaccine name (case-insensitive) only the latest administration counts for next due / overdue;
   `lastVetVisit` ignores future visits.
-- `PUT` on a vaccination publishes nothing (contract only names POST) — notification keeps the old due-date reminders.
+- `PUT` on a vaccination publishes `health.vaccination.recorded` again (same `vaccinationId`, health.yaml 1.2.0);
+  notification replaces that vaccination's reminders (and cancels them when `nextDueDate` is gone).
 - `pet.deleted` soft-deletes records but sends no `health.medication.cancelled`: notification cancels reminders
   from `pet.deleted` itself (events.md).
 

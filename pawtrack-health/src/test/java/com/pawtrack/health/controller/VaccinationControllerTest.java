@@ -138,6 +138,28 @@ class VaccinationControllerTest extends IntegrationTest {
     }
 
     @Test
+    void updatePublishesVaccinationRecordedAgain() throws Exception {
+        UUID petId = pets.create(owner, "Luna");
+        String id = create(owner, path(petId, "vaccinations"), """
+            {"vaccine":"Rabies","administeredOn":"2026-03-01","nextDueDate":"2027-03-01"}""");
+        awaitEvent("health.vaccination.recorded", data("vaccinationId", id));
+
+        putJson(owner, path(petId, "vaccinations") + "/" + id, """
+            {"vaccine":"Rabies","administeredOn":"2026-03-01","nextDueDate":"2029-03-01"}""")
+            .andExpect(status().isOk());
+        DocumentContext moved = awaitEvent("health.vaccination.recorded", data("vaccinationId", id));
+        assertThat(moved.read("$.data.nextDueDate", String.class)).isEqualTo("2029-03-01");
+        assertThat(moved.read("$.data.householdId", String.class)).isEqualTo(pets.householdOf(petId).toString());
+
+        // Removing the due date is sent too (without nextDueDate), so notification can cancel the reminders.
+        putJson(owner, path(petId, "vaccinations") + "/" + id, """
+            {"vaccine":"Rabies","administeredOn":"2026-03-01"}""")
+            .andExpect(status().isOk());
+        DocumentContext cleared = awaitEvent("health.vaccination.recorded", data("vaccinationId", id));
+        assertThat(cleared.read("$.data", java.util.Map.class)).doesNotContainKey("nextDueDate");
+    }
+
+    @Test
     void deleteRemovesTheVaccination() throws Exception {
         UUID petId = pets.create(owner, "Luna");
         String id = create(owner, path(petId, "vaccinations"), Bodies.VACCINATION);

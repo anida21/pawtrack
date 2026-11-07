@@ -14,7 +14,7 @@ public class OpenApiConfig {
     @Bean
     OpenAPI healthOpenApi() {
         return new OpenAPI()
-            .info(new Info().title("PawTrack Health API").version("1.1.0"))
+            .info(new Info().title("PawTrack Health API").version("1.2.0"))
             .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
             .components(new Components().addSecuritySchemes("bearerAuth",
                 new SecurityScheme().type(SecurityScheme.Type.HTTP).scheme("bearer").bearerFormat("JWT")));

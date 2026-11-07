@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: PawTrack Health API
-  version: 1.1.0
+  version: 1.2.0
   description: |
     Health records of a pet. Access rule: caller may access `/pets/{petId}/**` only if
     pet `GET /api/v1/pets/{petId}` with the forwarded token returns 200.
@@ -42,7 +42,7 @@ paths:
   /api/v1/pets/{petId}/vaccinations/{id}:
     parameters: [ { $ref: '#/components/parameters/PetId' }, { $ref: '#/components/parameters/Id' } ]
     put:
-      summary: Full replace of the editable fields. Publishes no event.
+      summary: Full replace of the editable fields. Publishes health.vaccination.recorded again (notification replaces reminders).
       operationId: updateVaccination
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/VaccinationRequest' } } } }
       responses:

@@ -46,12 +46,14 @@ public class VaccinationService {
         return mapper.toResponse(vaccination);
     }
 
+    /** Publishes health.vaccination.recorded again, so notification replaces this vaccination's reminders. */
     @Transactional
     public VaccinationResponse update(Jwt jwt, UUID petId, UUID id, VaccinationRequest request) {
-        access.checkForWrite(jwt, petId);
+        PetRef pet = access.checkForWrite(jwt, petId);
         Vaccination vaccination = find(petId, id);
         mapper.apply(request, vaccination);
         vaccination.touch();
+        eventPublisher.publish(HealthEvent.VaccinationRecorded.of(vaccination, pet.householdId()));
         return mapper.toResponse(vaccination);
     }
 
