@@ -1,0 +1,196 @@
+openapi: 3.0.3
+info:
+  title: PawTrack Health API
+  version: 1.0.0
+  description: |
+    Health records of a pet. Access rule: caller may access `/pets/{petId}/**` only if
+    pet `GET /api/v1/pets/{petId}` with the forwarded token returns 200.
+    SITTER role is enforced by pet service; health only needs read vs write = same rule.
+servers:
+  - url: http://health.pawtrack.local:8083
+security:
+  - bearerAuth: []
+paths:
+  /api/v1/pets/{petId}/vaccinations:
+    parameters: [ { $ref: '#/components/parameters/PetId' } ]
+    get:
+      operationId: listVaccinations
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Vaccination' } } } } }
+    post:
+      summary: Publishes health.vaccination.recorded (with nextDueDate if set).
+      operationId: createVaccination
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/VaccinationRequest' } } } }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Vaccination' } } } }
+        '400': { $ref: '#/components/responses/Problem' }
+  /api/v1/pets/{petId}/vaccinations/{id}:
+    parameters: [ { $ref: '#/components/parameters/PetId' }, { $ref: '#/components/parameters/Id' } ]
+    put:
+      operationId: updateVaccination
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/VaccinationRequest' } } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Vaccination' } } } }
+    delete:
+      operationId: deleteVaccination
+      responses: { '204': { description: Deleted } }
+  /api/v1/pets/{petId}/vet-visits:
+    parameters: [ { $ref: '#/components/parameters/PetId' } ]
+    get:
+      operationId: listVetVisits
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/VetVisit' } } } } }
+    post:
+      operationId: createVetVisit
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/VetVisitRequest' } } } }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/VetVisit' } } } }
+  /api/v1/pets/{petId}/vet-visits/{id}:
+    parameters: [ { $ref: '#/components/parameters/PetId' }, { $ref: '#/components/parameters/Id' } ]
+    put:
+      operationId: updateVetVisit
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/VetVisitRequest' } } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/VetVisit' } } } }
+    delete:
+      operationId: deleteVetVisit
+      responses: { '204': { description: Deleted } }
+  /api/v1/pets/{petId}/medications:
+    parameters: [ { $ref: '#/components/parameters/PetId' } ]
+    get:
+      operationId: listMedications
+      parameters: [ { name: activeOnly, in: query, schema: { type: boolean, default: false } } ]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Medication' } } } } }
+    post:
+      summary: Publishes health.medication.scheduled.
+      operationId: createMedication
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/MedicationRequest' } } } }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Medication' } } } }
+  /api/v1/pets/{petId}/medications/{id}:
+    parameters: [ { $ref: '#/components/parameters/PetId' }, { $ref: '#/components/parameters/Id' } ]
+    put:
+      summary: Publishes health.medication.scheduled again (notification replaces reminders).
+      operationId: updateMedication
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/MedicationRequest' } } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Medication' } } } }
+    delete:
+      summary: Publishes health.medication.cancelled.
+      operationId: deleteMedication
+      responses: { '204': { description: Deleted } }
+  /api/v1/pets/{petId}/weights:
+    parameters: [ { $ref: '#/components/parameters/PetId' } ]
+    get:
+      operationId: listWeights
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Weight' } } } } }
+    post:
+      operationId: createWeight
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/WeightRequest' } } } }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Weight' } } } }
+  /api/v1/pets/{petId}/summary:
+    parameters: [ { $ref: '#/components/parameters/PetId' } ]
+    get:
+      summary: Dashboard card data for a pet.
+      operationId: getHealthSummary
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/HealthSummary' } } } }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    PetId: { name: petId, in: path, required: true, schema: { type: string, format: uuid } }
+    Id: { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+  responses:
+    Problem:
+      description: Error (RFC 7807)
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+  schemas:
+    Problem:
+      type: object
+      properties: { type: { type: string }, title: { type: string }, status: { type: integer }, detail: { type: string } }
+    VaccinationRequest:
+      type: object
+      required: [vaccine, administeredOn]
+      properties:
+        vaccine: { type: string, maxLength: 100, example: Rabies }
+        administeredOn: { type: string, format: date }
+        nextDueDate: { type: string, format: date }
+        batchNumber: { type: string, maxLength: 50 }
+        clinic: { type: string, maxLength: 120 }
+        notes: { type: string, maxLength: 2000 }
+    Vaccination:
+      allOf:
+        - $ref: '#/components/schemas/VaccinationRequest'
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            petId: { type: string, format: uuid }
+            createdAt: { type: string, format: date-time }
+    VetVisitRequest:
+      type: object
+      required: [visitDate, reason]
+      properties:
+        visitDate: { type: string, format: date-time }
+        clinic: { type: string, maxLength: 120 }
+        vetName: { type: string, maxLength: 100 }
+        reason: { type: string, maxLength: 200 }
+        diagnosis: { type: string, maxLength: 2000 }
+        treatment: { type: string, maxLength: 2000 }
+        cost: { type: number, format: double, minimum: 0 }
+        currency: { type: string, pattern: '^[A-Z]{3}$', default: BAM }
+    VetVisit:
+      allOf:
+        - $ref: '#/components/schemas/VetVisitRequest'
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            petId: { type: string, format: uuid }
+            createdAt: { type: string, format: date-time }
+    MedicationRequest:
+      type: object
+      required: [name, dosage, startDate, frequency]
+      properties:
+        name: { type: string, maxLength: 100 }
+        dosage: { type: string, maxLength: 60, example: 1 tablet }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        frequency: { type: string, enum: [ONCE, DAILY, TWICE_DAILY, WEEKLY, MONTHLY] }
+        timeOfDay: { type: string, pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$', example: '08:00' }
+        notes: { type: string, maxLength: 2000 }
+    Medication:
+      allOf:
+        - $ref: '#/components/schemas/MedicationRequest'
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            petId: { type: string, format: uuid }
+            active: { type: boolean, readOnly: true }
+    WeightRequest:
+      type: object
+      required: [measuredOn, weightKg]
+      properties:
+        measuredOn: { type: string, format: date }
+        weightKg: { type: number, format: double, minimum: 0.01, maximum: 200 }
+    Weight:
+      allOf:
+        - $ref: '#/components/schemas/WeightRequest'
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            petId: { type: string, format: uuid }
+    HealthSummary:
+      type: object
+      properties:
+        petId: { type: string, format: uuid }
+        latestWeightKg: { type: number, format: double }
+        lastVetVisit: { type: string, format: date-time }
+        nextVaccinationDue: { type: string, format: date }
+        overdueVaccinations: { type: integer }
+        activeMedications: { type: integer }

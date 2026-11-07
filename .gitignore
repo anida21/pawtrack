@@ -1,0 +1,9 @@
+# Per-folder rules live in each folder's own .gitignore.
+.env
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# Claude Code: personal settings stay local, shared ones are committed
+.claude/settings.local.json

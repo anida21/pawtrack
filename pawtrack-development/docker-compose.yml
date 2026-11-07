@@ -1,0 +1,134 @@
+# PawTrack local environment.
+#   docker compose up -d                       -> infra only (run services from IDE)
+#   docker compose --profile services up -d    -> infra + all services built from sibling repos
+name: pawtrack
+
+x-service-env: &service-env
+  SPRING_PROFILES_ACTIVE: docker
+  DB_HOST: postgres
+  DB_PORT: 5432
+  RABBITMQ_HOST: rabbitmq
+  KEYCLOAK_ISSUER_URI: http://keycloak.pawtrack.local:8180/realms/pawtrack
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports: ["5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker-mounts/postgres:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 20
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.4
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak_db
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak
+      # Same URL inside Docker and from the browser -> identical JWT issuer everywhere.
+      KC_HTTP_PORT: 8180
+      KC_HOSTNAME: http://keycloak.pawtrack.local:8180
+      KC_HEALTH_ENABLED: "true"
+    ports: ["8180:8180"]
+    volumes:
+      - ./docker-mounts/keycloak:/opt/keycloak/data/import:ro
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks:
+      default:
+        aliases: [keycloak.pawtrack.local]
+
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: pawtrack
+      RABBITMQ_DEFAULT_PASS: pawtrack
+    ports: ["5672:5672", "15672:15672"]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: pawtrack
+      MINIO_ROOT_PASSWORD: pawtrack123
+    ports: ["9000:9000", "9001:9001"]
+    volumes: [miniodata:/data]
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on: [minio]
+    entrypoint: >
+      /bin/sh -c "until mc alias set local http://minio:9000 pawtrack pawtrack123; do sleep 2; done;
+      mc mb --ignore-existing local/pet-photos; exit 0"
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports: ["1025:1025", "8025:8025"]
+
+  # ---------- application services (profile: services) ----------
+  identity:
+    profiles: [services]
+    build: ../pawtrack-identity
+    environment: { <<: *service-env, DB_NAME: identity_db, DB_USER: identity, DB_PASSWORD: identity }
+    ports: ["8081:8081"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+      keycloak: { condition: service_started }
+
+  pet:
+    profiles: [services]
+    build: ../pawtrack-pet
+    environment:
+      <<: *service-env
+      DB_NAME: pet_db
+      DB_USER: pet
+      DB_PASSWORD: pet
+      IDENTITY_URL: http://identity:8081
+      MINIO_URL: http://minio:9000
+    ports: ["8082:8082"]
+    depends_on: [identity, minio-init]
+
+  health:
+    profiles: [services]
+    build: ../pawtrack-health
+    environment: { <<: *service-env, DB_NAME: health_db, DB_USER: health, DB_PASSWORD: health, PET_URL: "http://pet:8082" }
+    ports: ["8083:8083"]
+    depends_on: [pet]
+
+  notification:
+    profiles: [services]
+    build: ../pawtrack-notification
+    environment: { <<: *service-env, DB_NAME: notification_db, DB_USER: notification, DB_PASSWORD: notification, MAIL_HOST: mailpit, MAIL_PORT: "1025" }
+    ports: ["8084:8084"]
+    depends_on: [rabbitmq, mailpit]
+
+  gateway:
+    profiles: [services]
+    build: ../pawtrack-gateway
+    environment:
+      <<: *service-env
+      IDENTITY_URL: http://identity:8081
+      PET_URL: http://pet:8082
+      HEALTH_URL: http://health:8083
+      NOTIFICATION_URL: http://notification:8084
+    ports: ["8080:8080"]
+    depends_on: [identity, pet, health, notification]
+
+volumes:
+  pgdata:
+  miniodata:

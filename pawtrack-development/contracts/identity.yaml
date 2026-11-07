@@ -1,0 +1,194 @@
+openapi: 3.0.3
+info:
+  title: PawTrack Identity API
+  version: 1.0.0
+  description: |
+    Users (mirrored from Keycloak on first call), households and memberships.
+    The user id is always the JWT `sub` claim.
+servers:
+  - url: http://identity.pawtrack.local:8081
+security:
+  - bearerAuth: []
+tags:
+  - name: Me
+  - name: Households
+  - name: Invitations
+paths:
+  /api/v1/me:
+    get:
+      tags: [Me]
+      summary: Current user. Creates the local user record from the JWT on first call, together with a default household "My pets".
+      operationId: getMe
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/User' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+    patch:
+      tags: [Me]
+      operationId: updateMe
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/UpdateUserRequest' } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/User' } } } }
+        '400': { $ref: '#/components/responses/Problem' }
+  /api/v1/me/households:
+    get:
+      tags: [Me]
+      summary: Households the current user belongs to (used by other services for access checks).
+      operationId: getMyHouseholds
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/HouseholdMembership' } }
+  /api/v1/households:
+    post:
+      tags: [Households]
+      operationId: createHousehold
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/HouseholdRequest' } } }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Household' } } } }
+        '400': { $ref: '#/components/responses/Problem' }
+  /api/v1/households/{householdId}:
+    parameters: [ { $ref: '#/components/parameters/HouseholdId' } ]
+    get:
+      tags: [Households]
+      operationId: getHousehold
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Household' } } } }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+    put:
+      tags: [Households]
+      summary: Rename. OWNER only.
+      operationId: updateHousehold
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/HouseholdRequest' } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Household' } } } }
+        '403': { $ref: '#/components/responses/Problem' }
+    delete:
+      tags: [Households]
+      summary: OWNER only. Publishes household.deleted.
+      operationId: deleteHousehold
+      responses:
+        '204': { description: Deleted }
+        '403': { $ref: '#/components/responses/Problem' }
+  /api/v1/households/{householdId}/members/{userId}:
+    parameters:
+      - { $ref: '#/components/parameters/HouseholdId' }
+      - { name: userId, in: path, required: true, schema: { type: string, format: uuid } }
+    delete:
+      tags: [Households]
+      summary: OWNER removes a member, or a member removes themself. The last OWNER cannot leave.
+      operationId: removeMember
+      responses:
+        '204': { description: Removed }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+  /api/v1/households/{householdId}/invitations:
+    parameters: [ { $ref: '#/components/parameters/HouseholdId' } ]
+    post:
+      tags: [Invitations]
+      summary: OWNER invites by email. Returns a one-time code valid 7 days. Publishes household.invitation.created.
+      operationId: createInvitation
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/InvitationRequest' } } }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Invitation' } } } }
+        '403': { $ref: '#/components/responses/Problem' }
+  /api/v1/invitations/{code}/accept:
+    post:
+      tags: [Invitations]
+      summary: Current user joins the household. Publishes household.member.added.
+      operationId: acceptInvitation
+      parameters: [ { name: code, in: path, required: true, schema: { type: string } } ]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Household' } } } }
+        '404': { $ref: '#/components/responses/Problem' }
+        '410': { $ref: '#/components/responses/Problem' }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    HouseholdId: { name: householdId, in: path, required: true, schema: { type: string, format: uuid } }
+  responses:
+    Problem:
+      description: Error (RFC 7807)
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+  schemas:
+    Problem:
+      type: object
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+    User:
+      type: object
+      required: [id, email, displayName, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        displayName: { type: string }
+        timezone: { type: string, example: Europe/Sarajevo }
+        emailNotifications: { type: boolean, default: true }
+        createdAt: { type: string, format: date-time }
+    UpdateUserRequest:
+      type: object
+      properties:
+        displayName: { type: string, minLength: 1, maxLength: 100 }
+        timezone: { type: string }
+        emailNotifications: { type: boolean }
+    HouseholdRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+    Household:
+      type: object
+      required: [id, name, members]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        members:
+          type: array
+          items: { $ref: '#/components/schemas/Member' }
+        createdAt: { type: string, format: date-time }
+    Member:
+      type: object
+      properties:
+        userId: { type: string, format: uuid }
+        displayName: { type: string }
+        email: { type: string }
+        role: { $ref: '#/components/schemas/HouseholdRole' }
+        joinedAt: { type: string, format: date-time }
+    HouseholdRole:
+      type: string
+      enum: [OWNER, MEMBER, SITTER]
+    HouseholdMembership:
+      type: object
+      required: [householdId, householdName, role]
+      properties:
+        householdId: { type: string, format: uuid }
+        householdName: { type: string }
+        role: { $ref: '#/components/schemas/HouseholdRole' }
+    InvitationRequest:
+      type: object
+      required: [email, role]
+      properties:
+        email: { type: string, format: email }
+        role: { type: string, enum: [MEMBER, SITTER] }
+    Invitation:
+      type: object
+      properties:
+        code: { type: string }
+        email: { type: string }
+        role: { type: string }
+        expiresAt: { type: string, format: date-time }

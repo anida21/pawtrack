@@ -1,0 +1,4 @@
+.env
+node_modules/
+e2e/junit.xml
+e2e/src/proxy/

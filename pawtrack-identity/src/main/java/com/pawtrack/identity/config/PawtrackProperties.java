@@ -1,0 +1,23 @@
+package com.pawtrack.identity.config;
+
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.validation.annotation.Validated;
+
+/** Service settings under the {@code pawtrack.*} prefix in application.yml. */
+@Validated
+@ConfigurationProperties(prefix = "pawtrack")
+public record PawtrackProperties(
+    @Valid @NotNull Events events,
+    @Valid @NotNull Invitations invitations
+) {
+
+    public record Events(@NotBlank String exchange) {
+    }
+
+    public record Invitations(@Positive int validityDays) {
+    }
+}

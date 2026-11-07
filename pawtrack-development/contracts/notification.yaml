@@ -1,0 +1,68 @@
+openapi: 3.0.3
+info:
+  title: PawTrack Notification API
+  version: 1.0.0
+  description: |
+    Reminders are created mostly from events (see events.md), but users can also add custom ones.
+    A scheduler (every minute) sends due reminders by email (Mailpit locally) and marks them SENT.
+    Recipients = all members of the pet's household with emailNotifications=true.
+servers:
+  - url: http://notification.pawtrack.local:8084
+security:
+  - bearerAuth: []
+paths:
+  /api/v1/reminders:
+    get:
+      summary: Upcoming reminders for pets in the caller's households.
+      operationId: listReminders
+      parameters:
+        - { name: petId, in: query, schema: { type: string, format: uuid } }
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/ReminderStatus' } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Reminder' } } } } }
+    post:
+      summary: Custom reminder (source=CUSTOM).
+      operationId: createReminder
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ReminderRequest' } } } }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Reminder' } } } }
+  /api/v1/reminders/{id}:
+    parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    delete:
+      summary: Cancel (status=CANCELLED).
+      operationId: cancelReminder
+      responses: { '204': { description: Cancelled } }
+  /api/v1/reminders/{id}/done:
+    parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    post:
+      operationId: markReminderDone
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Reminder' } } } }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  schemas:
+    ReminderStatus:
+      type: string
+      enum: [PENDING, SENT, DONE, CANCELLED]
+    ReminderRequest:
+      type: object
+      required: [petId, title, dueAt]
+      properties:
+        petId: { type: string, format: uuid }
+        title: { type: string, maxLength: 120 }
+        message: { type: string, maxLength: 1000 }
+        dueAt: { type: string, format: date-time }
+    Reminder:
+      allOf:
+        - $ref: '#/components/schemas/ReminderRequest'
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            householdId: { type: string, format: uuid }
+            source: { type: string, enum: [VACCINATION, MEDICATION, CUSTOM] }
+            sourceId: { type: string, format: uuid }
+            status: { $ref: '#/components/schemas/ReminderStatus' }
+            sentAt: { type: string, format: date-time }

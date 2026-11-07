@@ -1,0 +1,67 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-users
+      author: pawtrack
+      changes:
+        - createTable:
+            tableName: users
+            columns:
+              - column: { name: id, type: uuid, constraints: { primaryKey: true } }   # = JWT sub
+              - column: { name: email, type: varchar(255), constraints: { nullable: false, unique: true } }
+              - column: { name: display_name, type: varchar(100), constraints: { nullable: false } }
+              - column: { name: timezone, type: varchar(64), defaultValue: Europe/Sarajevo, constraints: { nullable: false } }
+              - column: { name: email_notifications, type: boolean, defaultValueBoolean: true, constraints: { nullable: false } }
+              - column: { name: created_at, type: timestamptz, constraints: { nullable: false } }
+              - column: { name: updated_at, type: timestamptz }
+
+  - changeSet:
+      id: 001-households
+      author: pawtrack
+      changes:
+        - createTable:
+            tableName: households
+            columns:
+              - column: { name: id, type: uuid, constraints: { primaryKey: true } }
+              - column: { name: name, type: varchar(100), constraints: { nullable: false } }
+              - column: { name: created_by, type: uuid, constraints: { nullable: false, foreignKeyName: fk_households_created_by, references: users(id) } }
+              - column: { name: created_at, type: timestamptz, constraints: { nullable: false } }
+              - column: { name: updated_at, type: timestamptz }
+
+  - changeSet:
+      id: 001-household-members
+      author: pawtrack
+      changes:
+        - createTable:
+            tableName: household_members
+            columns:
+              - column: { name: household_id, type: uuid, constraints: { nullable: false, foreignKeyName: fk_members_household, references: households(id), deleteCascade: true } }
+              - column: { name: user_id, type: uuid, constraints: { nullable: false, foreignKeyName: fk_members_user, references: users(id) } }
+              - column: { name: role, type: varchar(20), constraints: { nullable: false } }   # OWNER | MEMBER | SITTER
+              - column: { name: joined_at, type: timestamptz, constraints: { nullable: false } }
+        - addPrimaryKey:
+            tableName: household_members
+            columnNames: household_id, user_id
+            constraintName: pk_household_members
+        - createIndex:
+            tableName: household_members
+            indexName: ix_household_members_user
+            columns:
+              - column: { name: user_id }
+
+  - changeSet:
+      id: 001-invitations
+      author: pawtrack
+      changes:
+        - createTable:
+            tableName: invitations
+            columns:
+              - column: { name: id, type: uuid, constraints: { primaryKey: true } }
+              - column: { name: household_id, type: uuid, constraints: { nullable: false, foreignKeyName: fk_invitations_household, references: households(id), deleteCascade: true } }
+              - column: { name: code, type: varchar(64), constraints: { nullable: false, unique: true } }
+              - column: { name: email, type: varchar(255), constraints: { nullable: false } }
+              - column: { name: role, type: varchar(20), constraints: { nullable: false } }
+              - column: { name: invited_by, type: uuid, constraints: { nullable: false, foreignKeyName: fk_invitations_invited_by, references: users(id) } }
+              - column: { name: expires_at, type: timestamptz, constraints: { nullable: false } }
+              - column: { name: accepted_at, type: timestamptz }
+              - column: { name: accepted_by, type: uuid }
+              - column: { name: created_at, type: timestamptz, constraints: { nullable: false } }
